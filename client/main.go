@@ -21,10 +21,12 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
+	start := time.Now()
 	r, err := c.StayAlive(ctx, &stayalive.StayAliveRequest{})
 	if err != nil {
 		log.Fatalf("error calling function SayHello: %v", err)
 	}
+	elapsed := time.Since(start)
 
-	log.Printf("gRPC server response: %v", r.GetAliveResp())
+	log.Printf("gRPC server response: %v, with elapsed time: %v", r.GetAliveResp(), elapsed)
 }
