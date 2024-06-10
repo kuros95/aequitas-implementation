@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	aeuqitas "magisterium/aequitas"
 	"magisterium/stayalive"
 	"time"
 
@@ -37,7 +36,7 @@ func main() {
 	prio := 3
 	for {
 		elapsed := connect(prio)
-		reduce := aeuqitas.TimeCheck(time.Millisecond, elapsed)
+		reduce := aequitas.TimeCheck(time.Millisecond, elapsed)
 		if reduce && prio > 0 {
 			prio = prio - 1
 		}

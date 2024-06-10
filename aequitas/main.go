@@ -1,4 +1,4 @@
-package aeuqitas
+package aequitas
 
 import "time"
 
