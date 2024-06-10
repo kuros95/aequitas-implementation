@@ -1,4 +1,14 @@
-package main
+package aeuqitas
+
+import "time"
+
+func TimeCheck(goal time.Duration, actual time.Duration) bool {
+	if actual > goal {
+		return false
+	} else {
+		return true
+	}
+}
 
 // 1. intercept traffic
 // 2. start time measuring
