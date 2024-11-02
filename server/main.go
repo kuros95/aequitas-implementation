@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 type gRPCServer struct {
@@ -14,7 +15,10 @@ type gRPCServer struct {
 }
 
 func (m *gRPCServer) StayAlive(ctx context.Context, request *stayalive.StayAliveRequest) (*stayalive.StayAliveResponse, error) {
-	log.Println("It's alive!")
+	md, _ := metadata.FromIncomingContext(ctx)
+
+	prio := md.Get("prio")[0]
+	log.Printf("Got prio: %v. It's alive!", prio)
 	return &stayalive.StayAliveResponse{AliveResp: bool(true)}, nil
 }
 
