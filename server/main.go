@@ -16,9 +16,8 @@ type gRPCServer struct {
 
 func (m *gRPCServer) StayAlive(ctx context.Context, request *stayalive.StayAliveRequest) (*stayalive.StayAliveResponse, error) {
 	md, _ := metadata.FromIncomingContext(ctx)
-
 	prio := md.Get("prio")[0]
-	log.Printf("Got prio: %v. It's alive!", prio)
+	log.Printf("Got prio: %v. Sending response...", prio)
 	return &stayalive.StayAliveResponse{AliveResp: bool(true)}, nil
 }
 

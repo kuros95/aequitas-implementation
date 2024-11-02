@@ -14,11 +14,30 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func rpcWithPrio(prio string, lowered bool) bool {
-	if lowered {
-		prio = "be"
+var prios = []string{"hi", "lo"}
+
+type rpc struct {
+	prio      string
+	isLowered bool
+	goal      time.Duration
+	elapsed   time.Duration
+}
+
+func (r rpc) send() bool {
+	if r.isLowered {
+		r.prio = "be"
 	}
-	conn, err := grpc.NewClient("localhost:2222", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	var sock string
+	if r.prio == "hi" {
+		sock = "localhost:2220"
+	}
+	if r.prio == "lo" {
+		sock = "localhost:2222"
+	}
+	if r.prio == "be" {
+		sock = "localhost:2224"
+	}
+	conn, err := grpc.NewClient(sock, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("failed to connect to gRPC server at localhost:2222: %v", err)
 		return false
@@ -27,47 +46,59 @@ func rpcWithPrio(prio string, lowered bool) bool {
 	c := stayalive.NewStayAliveServiceClient(conn)
 
 	header := metadata.New(map[string]string{
-		"prio": prio,
+		"prio": r.prio,
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	ctxWithMD := metadata.NewOutgoingContext(ctx, header)
 
+	start := time.Now()
 	resp, err := c.StayAlive(ctxWithMD, &stayalive.StayAliveRequest{})
-	fmt.Printf("sending RPC with priority: %v \n", prio)
+	fmt.Printf("sending RPC with priority: %v \n", r.prio)
 	if err != nil {
 		log.Fatalf("error calling function StayAlive: %v", err)
 	}
+	r.elapsed = time.Since(start)
+	fmt.Printf("this rpc took %v to complete \n", r.elapsed)
 
 	return resp.GetAliveResp()
 }
 
-func main() {
-	prios := [2]string{"hi", "lo"}
-	var done int
-	var fail int
-	lowered := false
-	//send rpcs in parallel with different prios, then measure each individually and individually lower prio, retain lowered prio
-	//needs a category of rpc to send, so that lowered prio may be preserved (interface?), and they may be differently served
-	//weighted random selection of priorities required
+func (r rpc) admit() bool {
+	if r.prio == "hi" {
+		r.goal = 50 * time.Millisecond
+	} else {
+		r.goal = 25 * time.Millisecond
+	}
+	return aequitas.TimeCheck(r.goal, r.elapsed)
+}
+
+func sendRPC(done int, sent int) {
+	var rpc rpc
+	rpc.prio = prios[rand.Intn(len(prios))]
 	for {
-		prio := prios[rand.Intn(len(prios))]
-		start := time.Now()
-		completed := rpcWithPrio(prio, lowered)
-		elapsed := time.Since(start)
+		sent++
+		completed := rpc.send()
 		if completed {
 			done++
-		} else {
-			fail++
 		}
-
-		reduce := aequitas.TimeCheck(time.Millisecond, elapsed)
-		if reduce && prio == "hi" || prio == "lo" {
-			lowered = true
+		if !rpc.isLowered {
+			rpc.isLowered = rpc.admit()
+			fmt.Println("priority lowered")
 		}
-		time.Sleep(time.Second)
+		if rpc.prio == "hi" {
+			time.Sleep(time.Second)
+		}
 	}
+}
 
+func main() {
+	var done int
+	var sent int
+	//weighted random selection of priorities required
+	for {
+		go sendRPC(done, sent)
+	}
 }
