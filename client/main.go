@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"magisterium/aequitas"
 	"magisterium/stayalive"
@@ -23,7 +22,7 @@ type rpc struct {
 	elapsed   time.Duration
 }
 
-func (r rpc) send() bool {
+func (r rpc) send() (bool, time.Duration) {
 	if r.isLowered {
 		r.prio = "be"
 	}
@@ -37,10 +36,11 @@ func (r rpc) send() bool {
 	if r.prio == "be" {
 		sock = "localhost:2224"
 	}
+
 	conn, err := grpc.NewClient(sock, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("failed to connect to gRPC server at localhost:2222: %v", err)
-		return false
+		return false, 0
 	}
 	defer conn.Close()
 	c := stayalive.NewStayAliveServiceClient(conn)
@@ -56,49 +56,45 @@ func (r rpc) send() bool {
 
 	start := time.Now()
 	resp, err := c.StayAlive(ctxWithMD, &stayalive.StayAliveRequest{})
-	fmt.Printf("sending RPC with priority: %v \n", r.prio)
+	log.Printf("sending RPC with priority: %v \n", r.prio)
 	if err != nil {
-		log.Fatalf("error calling function StayAlive: %v", err)
+		log.Printf("error calling function StayAlive: %v", err)
+		return false, 0
 	}
 	r.elapsed = time.Since(start)
-	fmt.Printf("this rpc took %v to complete \n", r.elapsed)
 
-	return resp.GetAliveResp()
+	return resp.GetAliveResp(), r.elapsed
 }
 
 func (r rpc) admit() bool {
 	if r.prio == "hi" {
-		r.goal = 50 * time.Millisecond
+		r.goal = 20 * time.Millisecond
 	} else {
-		r.goal = 25 * time.Millisecond
+		r.goal = 15 * time.Millisecond
 	}
-	return aequitas.TimeCheck(r.goal, r.elapsed)
+	return aequitas.LowerPrio(r.goal, r.elapsed)
 }
 
-func sendRPC(done int, sent int) {
+func sendRPC() {
 	var rpc rpc
 	rpc.prio = prios[rand.Intn(len(prios))]
 	for {
-		sent++
-		completed := rpc.send()
-		if completed {
-			done++
-		}
+		_, rpc.elapsed = rpc.send()
+
 		if !rpc.isLowered {
 			rpc.isLowered = rpc.admit()
-			fmt.Println("priority lowered")
 		}
 		if rpc.prio == "hi" {
+			time.Sleep(5 * time.Second)
+		} else {
 			time.Sleep(time.Second)
 		}
 	}
 }
 
 func main() {
-	var done int
-	var sent int
 	//weighted random selection of priorities required
 	for {
-		go sendRPC(done, sent)
+		go sendRPC()
 	}
 }

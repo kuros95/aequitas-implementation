@@ -1,12 +1,16 @@
 package aequitas
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
-func TimeCheck(goal time.Duration, actual time.Duration) bool {
-	if actual > goal {
-		return false
-	} else {
+func LowerPrio(goal time.Duration, elapsed time.Duration) bool {
+	if elapsed > goal {
+		fmt.Println("priority lowered")
 		return true
+	} else {
+		return false
 	}
 }
 
