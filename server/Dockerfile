@@ -1,18 +1,21 @@
-FROM ubuntu:22.04 AS builder
+FROM golang:1.23 AS builder
 
 WORKDIR /builder
 
-COPY . /builder/
-COPY ../stayalive /server/
+RUN mkdir server && mkdir stayalive
 
-RUN go build .
+COPY ./server/main.go /builder/server
 
-RUN ll /builder
+COPY /stayalive/ /builder/stayalive
+
+COPY go.mod go.sum /builder/
+
+RUN pwd && ls -al && go build ./server/main.go
 
 FROM alpine:3.20 AS runner
 
 WORKDIR /server
 
-COPY builder/builder/main runner/server/
+COPY --from=builder /builder/main runner/
 
 CMD [ "./main" ]
