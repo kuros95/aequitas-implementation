@@ -1,3 +1,5 @@
+ARG PORT=2220
+
 FROM golang:1.23 AS builder
 
 WORKDIR /builder
@@ -10,12 +12,14 @@ COPY /stayalive/ /builder/stayalive
 
 COPY go.mod go.sum /builder/
 
-RUN pwd && ls -al && go build ./server/main.go
+RUN go build ./server/main.go
 
 FROM alpine:3.20 AS runner
 
-WORKDIR /server
+WORKDIR /runner
 
 COPY --from=builder /builder/main runner/
 
-CMD [ "./main" ]
+EXPOSE 2220 2222 2224
+
+CMD [ "./main", "-p", "PORT" ]
