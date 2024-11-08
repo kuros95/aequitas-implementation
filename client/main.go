@@ -28,13 +28,13 @@ func (r rpc) send() (bool, time.Duration) {
 	}
 	var sock string
 	if r.prio == "hi" {
-		sock = "localhost:2220"
+		sock = "172.17.0.2:2220"
 	}
 	if r.prio == "lo" {
-		sock = "localhost:2222"
+		sock = "172.17.0.3:2222"
 	}
 	if r.prio == "be" {
-		sock = "localhost:2224"
+		sock = "172.17.0.4:2224"
 	}
 
 	conn, err := grpc.NewClient(sock, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -56,7 +56,7 @@ func (r rpc) send() (bool, time.Duration) {
 
 	start := time.Now()
 	resp, err := c.StayAlive(ctxWithMD, &stayalive.StayAliveRequest{})
-	log.Printf("sending RPC with priority: %v \n", r.prio)
+	log.Printf("sending RPC with priority: %v to %v \n", r.prio, sock)
 	if err != nil {
 		log.Printf("error calling function StayAlive: %v", err)
 		return false, 0
@@ -93,8 +93,10 @@ func sendRPC() {
 }
 
 func main() {
+	log.Printf("starting RPC sending app...")
 	//weighted random selection of priorities required
 	for {
 		go sendRPC()
+		time.Sleep(2 * time.Millisecond)
 	}
 }

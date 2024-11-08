@@ -23,6 +23,31 @@ func (m *gRPCServer) StayAlive(ctx context.Context, request *stayalive.StayAlive
 	return &stayalive.StayAliveResponse{AliveResp: bool(true)}, nil
 }
 
+func getIP(iface string) string {
+	nic, err := net.InterfaceByName(iface)
+	var ipv4 net.IP
+	if err != nil {
+		log.Fatalf("could not get network interface info, error: %v", err)
+	}
+
+	addrs, err := nic.Addrs()
+	if err != nil {
+		log.Fatalf("could not get addresses from interface, error: %v", err)
+	}
+
+	for _, addr := range addrs {
+		if ipv4 = addr.(*net.IPNet).IP.To4(); ipv4 != nil {
+			break
+		}
+	}
+
+	if ipv4 == nil {
+		return ""
+	}
+
+	return ipv4.String()
+}
+
 func main() {
 	var port int
 	flag.IntVar(&port, "p", 1, "port on which to run rpc server")
@@ -32,8 +57,10 @@ func main() {
 		log.Fatalf("exiting, no port provided. Please provide a port on which to run server (-p flag).")
 	}
 
+	ip := getIP("eth0")
+
 	portNumber := strconv.Itoa(port)
-	addr := "localhost:" + portNumber
+	addr := ip + ":" + portNumber
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("failed to listen : %v", err)

@@ -2,6 +2,8 @@ ARG PORT=2220
 
 FROM golang:1.23 AS builder
 
+ENV CGO_ENABLED=0
+
 WORKDIR /builder
 
 RUN mkdir server && mkdir stayalive
@@ -12,14 +14,10 @@ COPY /stayalive/ /builder/stayalive
 
 COPY go.mod go.sum /builder/
 
-RUN go build ./server/main.go
-
-FROM alpine:3.20 AS runner
-
-WORKDIR /runner
-
-COPY --from=builder /builder/main runner/
+RUN go build -tags netgo -a -v -o server ./server/
 
 EXPOSE 2220 2222 2224
 
-CMD [ "./main", "-p", "PORT" ]
+ENTRYPOINT [ "./server/server", "-p" ]
+
+CMD [ "PORT" ]
