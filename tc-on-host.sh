@@ -20,3 +20,5 @@ tc filter add dev eth0 protocol ip parent 1: prio 2 u32 match ip src $src_ip \
 tc qdisc add dev eth0 parent 1:2 handle 12: sfq perturb 10
 tc qdisc add dev eth0 parent 1:3 handle 13: sfq perturb 10
 tc qdisc add dev eth0 parent 1:4 handle 14: sfq perturb 10
+
+echo "traffic control added"

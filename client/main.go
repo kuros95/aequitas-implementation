@@ -5,6 +5,7 @@ import (
 	"log"
 	"magisterium/aequitas"
 	"magisterium/stayalive"
+	"os/exec"
 	"time"
 
 	"golang.org/x/exp/rand"
@@ -93,10 +94,18 @@ func sendRPC() {
 }
 
 func main() {
-	log.Printf("starting RPC sending app...")
+
+	log.Printf("shaping traffic...")
+	tc := exec.Command("./tc-on-host.sh")
+	if err := tc.Run(); err != nil {
+		log.Fatalf("failed to apply traffic control, error: %v", err)
+	}
+	log.Printf("traffic control added")
+
+	log.Printf("sending RPCs...")
 	//weighted random selection of priorities required
 	for {
 		go sendRPC()
-		time.Sleep(2 * time.Millisecond)
+		time.Sleep(time.Millisecond)
 	}
 }
