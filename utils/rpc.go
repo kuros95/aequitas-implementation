@@ -17,6 +17,7 @@ type rpc struct {
 	isLowered bool
 	goal      time.Duration
 	elapsed   time.Duration
+	size      int
 }
 
 type prio struct {
@@ -24,11 +25,12 @@ type prio struct {
 	latency     time.Duration
 	target_pctl int
 	incr_window int
+	p_admit     float64
 }
 
-var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0}, {"lo", 15 * time.Millisecond, 97, 0}}
+var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1}, {"lo", 15 * time.Millisecond, 97, 0, 1}}
 
-func (r rpc) send() (bool, time.Duration) {
+func (r rpc) send(size int) (bool, time.Duration) {
 	if r.isLowered {
 		r.prio.prio = "be"
 	}
@@ -72,11 +74,17 @@ func (r rpc) send() (bool, time.Duration) {
 	return resp.GetAliveResp(), r.elapsed
 }
 
-func SendRPC() {
+func SendRPC(size int) {
 	var rpc rpc
-	rpc.prio.prio = prios[rand.Intn(len(prios))].prio
+	prio_to_assign := prios[rand.Intn(len(prios))].prio
+
 	for {
-		completed, elapsed := rpc.send()
+		if rand.Float64() <= rpc.prio.p_admit {
+			rpc.prio.prio = prio_to_assign
+		} else {
+			rpc.prio.prio = "be"
+		}
+		completed, elapsed := rpc.send(size)
 		rpc.elapsed = elapsed
 		if completed {
 			log.Printf("completed an RPC with prio %v", rpc.prio)

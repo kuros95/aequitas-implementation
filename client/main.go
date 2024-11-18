@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"magisterium/utils"
 	"os/exec"
@@ -8,6 +9,9 @@ import (
 )
 
 func main() {
+	var size int
+	flag.IntVar(&size, "s", 0, "size of RPC to send")
+	flag.Parse()
 
 	log.Printf("shaping traffic...")
 	tc := exec.Command("./tc-on-host.sh")
@@ -19,7 +23,7 @@ func main() {
 	log.Printf("sending RPCs...")
 	//weighted random selection of priorities required
 	for {
-		go utils.SendRPC()
+		go utils.SendRPC(size)
 		time.Sleep(time.Millisecond)
 	}
 }

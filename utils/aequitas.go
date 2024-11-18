@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func Init(latency_target int, target_pctl int) {
+func AequitasInit(latency_target int, target_pctl int) {
 	for no_of_prio := range len(prios) {
 		incr_window := latency_target * (100 / (100 - target_pctl))
 		prios[no_of_prio].incr_window = incr_window
