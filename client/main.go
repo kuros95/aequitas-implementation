@@ -23,7 +23,7 @@ func main() {
 	log.Printf("sending RPCs...")
 	//weighted random selection of priorities required
 	for {
-		go utils.SendRPC(size)
+		go utils.SendRPC()
 		time.Sleep(time.Millisecond)
 	}
 }

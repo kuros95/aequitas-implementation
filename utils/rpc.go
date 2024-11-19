@@ -17,7 +17,6 @@ type rpc struct {
 	isLowered bool
 	goal      time.Duration
 	elapsed   time.Duration
-	size      int
 }
 
 type prio struct {
@@ -30,7 +29,7 @@ type prio struct {
 
 var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1}, {"lo", 15 * time.Millisecond, 97, 0, 1}}
 
-func (r rpc) send(size int) (bool, time.Duration) {
+func (r rpc) send() (bool, time.Duration) {
 	if r.isLowered {
 		r.prio.prio = "be"
 	}
@@ -74,7 +73,7 @@ func (r rpc) send(size int) (bool, time.Duration) {
 	return resp.GetAliveResp(), r.elapsed
 }
 
-func SendRPC(size int) {
+func SendRPC() {
 	var rpc rpc
 	prio_to_assign := prios[rand.Intn(len(prios))].prio
 
@@ -84,7 +83,7 @@ func SendRPC(size int) {
 		} else {
 			rpc.prio.prio = "be"
 		}
-		completed, elapsed := rpc.send(size)
+		completed, elapsed := rpc.send()
 		rpc.elapsed = elapsed
 		if completed {
 			log.Printf("completed an RPC with prio %v", rpc.prio)

@@ -50,7 +50,9 @@ func getIP(iface string) string {
 
 func main() {
 	var port int
+	var size int
 	flag.IntVar(&port, "p", 1, "port on which to run rpc server")
+	flag.IntVar(&size, "s", 32, "max rpc message size in kilobytes")
 	flag.Parse()
 
 	if port == 1 {
@@ -65,8 +67,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen : %v", err)
 	}
-
-	s := grpc.NewServer()
+	realSize := size * 1024
+	s := grpc.NewServer(grpc.MaxRecvMsgSize(realSize))
 	gRPCServer := &gRPCServer{}
 	stayalive.RegisterStayAliveServiceServer(s, gRPCServer)
 	log.Printf("server listening at %v", lis.Addr())
