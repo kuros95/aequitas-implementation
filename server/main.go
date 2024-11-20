@@ -12,6 +12,9 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+var port int
+var size int
+
 type gRPCServer struct {
 	stayalive.UnimplementedStayAliveServiceServer
 }
@@ -20,7 +23,10 @@ func (m *gRPCServer) StayAlive(ctx context.Context, request *stayalive.StayAlive
 	md, _ := metadata.FromIncomingContext(ctx)
 	prio := md.Get("prio")[0]
 	log.Printf("Got prio: %v. Sending response...", prio)
-	return &stayalive.StayAliveResponse{AliveResp: bool(true)}, nil
+	return &stayalive.StayAliveResponse{
+		AliveResp: bool(true),
+		Size:      int32(size),
+	}, nil
 }
 
 func getIP(iface string) string {
@@ -49,8 +55,7 @@ func getIP(iface string) string {
 }
 
 func main() {
-	var port int
-	var size int
+
 	flag.IntVar(&port, "p", 1, "port on which to run rpc server")
 	flag.IntVar(&size, "s", 32, "max rpc message size in kilobytes")
 	flag.Parse()
