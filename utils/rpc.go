@@ -15,21 +15,22 @@ import (
 type rpc struct {
 	prio
 	isLowered bool
-	goal      time.Duration
 	elapsed   time.Duration
+	size      int
 }
 
 type prio struct {
-	prio        string
-	latency     time.Duration
-	target_pctl int
-	incr_window int
-	p_admit     float64
+	prio            string
+	latency         time.Duration
+	target_pctl     int
+	incr_window     time.Duration
+	p_admit         float64
+	t_last_increase time.Time
 }
 
-var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1}, {"lo", 15 * time.Millisecond, 97, 0, 1}}
+var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 97, 0, 1, time.Now()}}
 
-func (r rpc) send() (bool, time.Duration) {
+func (r rpc) send() (bool, time.Duration, int) {
 	if r.isLowered {
 		r.prio.prio = "be"
 	}
@@ -47,7 +48,7 @@ func (r rpc) send() (bool, time.Duration) {
 	conn, err := grpc.NewClient(sock, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("failed to connect to gRPC server at localhost:2222: %v", err)
-		return false, 0
+		return false, 0, 0
 	}
 	defer conn.Close()
 	c := stayalive.NewStayAliveServiceClient(conn)
@@ -66,11 +67,11 @@ func (r rpc) send() (bool, time.Duration) {
 	log.Printf("sending RPC with priority: %v to %v \n", r.prio, sock)
 	if err != nil {
 		log.Printf("error calling function StayAlive: %v", err)
-		return false, 0
+		return false, 0, 0
 	}
 	r.elapsed = time.Since(start)
 
-	return resp.GetAliveResp(), r.elapsed
+	return resp.GetAliveResp(), r.elapsed, int(resp.GetSize())
 }
 
 func SendRPC() {
@@ -83,13 +84,16 @@ func SendRPC() {
 		} else {
 			rpc.prio.prio = "be"
 		}
-		completed, elapsed := rpc.send()
+
+		completed, elapsed, size := rpc.send()
 		rpc.elapsed = elapsed
+		rpc.size = size
+
 		if completed {
 			log.Printf("completed an RPC with prio %v", rpc.prio)
-		}
-		if !rpc.isLowered {
-			rpc.isLowered = rpc.admit()
+			rpc.admit()
+		} else if !rpc.isLowered {
+			rpc.isLowered = true
 		}
 		if rpc.prio.prio == "hi" {
 			time.Sleep(5 * time.Second)

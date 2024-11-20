@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"magisterium/utils"
 	"os/exec"
@@ -9,9 +8,6 @@ import (
 )
 
 func main() {
-	var size int
-	flag.IntVar(&size, "s", 0, "size of RPC to send")
-	flag.Parse()
 
 	log.Printf("shaping traffic...")
 	tc := exec.Command("./tc-on-host.sh")

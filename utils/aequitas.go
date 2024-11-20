@@ -1,31 +1,25 @@
 package utils
 
 import (
-	"fmt"
 	"time"
 )
 
 func AequitasInit(latency_target int, target_pctl int) {
-	for no_of_prio := range len(prios) {
+	for prio := range len(prios) {
 		incr_window := latency_target * (100 / (100 - target_pctl))
-		prios[no_of_prio].incr_window = incr_window
+		prios[prio].incr_window = time.Duration(incr_window) * time.Millisecond
 	}
 }
 
-func lowerPrio(goal time.Duration, elapsed time.Duration) bool {
-	if elapsed > goal {
-		fmt.Println("priority lowered")
-		return true
+func (r rpc) admit() {
+	if r.prio.latency > (r.elapsed / time.Duration(r.size)) {
+		if time.Since(time.Now())-time.Since(r.prio.t_last_increase) > r.incr_window {
+			r.prio.p_admit = min(r.prio.p_admit+0.005, 1)
+		}
+		r.t_last_increase = time.Now()
 	} else {
-		return false
+		//the second value is the minimum possible probability of admission for a given RPC,
+		//since it is not desirable to have 0 probability, as it would starve the network
+		r.prio.p_admit = max(r.prio.p_admit-(0.003*float64(r.size)), 0.3)
 	}
-}
-
-func (r rpc) admit() bool {
-	if r.prio.prio == "hi" {
-		r.goal = 20 * time.Millisecond
-	} else {
-		r.goal = 15 * time.Millisecond
-	}
-	return lowerPrio(r.goal, r.elapsed)
 }

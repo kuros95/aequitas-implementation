@@ -67,6 +67,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen : %v", err)
 	}
+
 	realSize := size * 1024
 	s := grpc.NewServer(grpc.MaxRecvMsgSize(realSize))
 	gRPCServer := &gRPCServer{}
