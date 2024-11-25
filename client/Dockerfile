@@ -10,7 +10,7 @@ COPY ./client/main.go /builder/client
 
 COPY /stayalive/ /builder/stayalive
 
-COPY /aequitas/ /builder/aequitas
+COPY /utils/ /builder/utils
 
 COPY go.mod go.sum tc-on-host.sh /builder/
 
