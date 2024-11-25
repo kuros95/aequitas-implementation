@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"magisterium/utils"
 	"os"
@@ -8,12 +9,18 @@ import (
 	"time"
 )
 
+var noAequitas bool
+
 func main() {
+
+	flag.BoolVar(&noAequitas, "n", false, "do not use the aequitas algorithm")
 	logFile, err := os.Create("client.log")
 	if err != nil {
 		log.Fatalf("failed to create logfile, error: %v", err)
 	}
 	log.SetOutput(logFile)
+	flag.Parse()
+
 	log.Printf("shaping traffic...")
 	tc := exec.Command("./tc-on-host.sh")
 	if err := tc.Run(); err != nil {
@@ -24,7 +31,13 @@ func main() {
 	log.Printf("sending RPCs...")
 	//weighted random selection of priorities required
 	for {
-		go utils.SendRPC()
+
+		if noAequitas {
+			go utils.SendRPCNoAequitas()
+		} else if !noAequitas {
+			go utils.SendRPC()
+		}
+
 		time.Sleep(time.Millisecond)
 	}
 }
