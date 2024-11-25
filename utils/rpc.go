@@ -92,13 +92,33 @@ func SendRPC() {
 		if completed {
 			log.Printf("completed an RPC with prio %v", rpc.prio)
 			rpc.admit()
-		} else if !rpc.isLowered {
+		} else if completed && !rpc.isLowered {
 			rpc.isLowered = true
+		} else if !completed {
+			log.Printf("falied to complete an RPC with prio %v", rpc.prio)
 		}
 		if rpc.prio.prio == "hi" {
 			time.Sleep(5 * time.Second)
 		} else {
 			time.Sleep(time.Second)
+		}
+	}
+}
+
+func SendRPCNoAequitas() {
+	var rpc rpc
+	prio_to_assign := prios[rand.Intn(len(prios))].prio
+	rpc.prio.prio = prio_to_assign
+
+	for {
+		completed, elapsed, size := rpc.send()
+		rpc.elapsed = elapsed
+		rpc.size = size
+
+		if completed {
+			log.Printf("completed an RPC with prio %v", rpc.prio)
+		} else {
+			log.Printf("falied to complete an RPC with prio %v", rpc.prio)
 		}
 	}
 }
