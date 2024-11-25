@@ -30,8 +30,9 @@ func (m *gRPCServer) StayAlive(ctx context.Context, request *stayalive.StayAlive
 }
 
 func getIP(iface string) string {
-	nic, err := net.InterfaceByName(iface)
 	var ipv4 net.IP
+
+	nic, err := net.InterfaceByName(iface)
 	if err != nil {
 		log.Fatalf("could not get network interface info, error: %v", err)
 	}
