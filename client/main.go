@@ -19,6 +19,7 @@ func main() {
 		log.Fatalf("failed to create logfile, error: %v", err)
 	}
 	log.SetOutput(logFile)
+
 	flag.Parse()
 
 	log.Printf("shaping traffic...")
@@ -27,6 +28,7 @@ func main() {
 		log.Fatalf("failed to apply traffic control, error: %v", err)
 	}
 	log.Printf("traffic control added")
+	utils.AequitasInit(15, 98)
 
 	log.Printf("sending RPCs...")
 	//weighted random selection of priorities required

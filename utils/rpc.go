@@ -28,7 +28,7 @@ type prio struct {
 	t_last_increase time.Time
 }
 
-var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 97, 0, 1, time.Now()}}
+var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 85, 0, 1, time.Now()}}
 
 func (r rpc) send() (bool, time.Duration, int) {
 	if r.isLowered {
@@ -47,7 +47,7 @@ func (r rpc) send() (bool, time.Duration, int) {
 
 	conn, err := grpc.NewClient(sock, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("failed to connect to gRPC server at localhost:2222: %v", err)
+		log.Fatalf("failed to connect to gRPC server at %v: %v", sock, err)
 		return false, 0, 0
 	}
 	defer conn.Close()
@@ -64,7 +64,7 @@ func (r rpc) send() (bool, time.Duration, int) {
 
 	start := time.Now()
 	resp, err := c.StayAlive(ctxWithMD, &stayalive.StayAliveRequest{})
-	log.Printf("sending RPC with priority: %v to %v \n", r.prio, sock)
+	log.Printf("sending RPC with priority: %v to %v \n", r.prio.prio, sock)
 	if err != nil {
 		log.Printf("error calling function StayAlive: %v", err)
 		return false, 0, 0
@@ -76,13 +76,14 @@ func (r rpc) send() (bool, time.Duration, int) {
 
 func SendRPC() {
 	var rpc rpc
-	prio_to_assign := prios[rand.Intn(len(prios))].prio
+	prio_to_assign := prios[rand.Intn(len(prios))]
 
 	for {
-		if rand.Float64() <= rpc.prio.p_admit {
-			rpc.prio.prio = prio_to_assign
+		if rand.Float64() <= prio_to_assign.p_admit {
+			rpc.prio.prio = prio_to_assign.prio
 		} else {
 			rpc.prio.prio = "be"
+			rpc.isLowered = true
 		}
 
 		completed, elapsed, size := rpc.send()
@@ -90,17 +91,16 @@ func SendRPC() {
 		rpc.size = size
 
 		if completed {
-			log.Printf("completed an RPC with prio %v", rpc.prio)
+			log.Printf("completed an RPC with prio %v", rpc.prio.prio)
 			rpc.admit()
-		} else if completed && !rpc.isLowered {
+		} else {
+			log.Printf("falied to complete an RPC with prio %v, lowering priority", rpc.prio.prio)
 			rpc.isLowered = true
-		} else if !completed {
-			log.Printf("falied to complete an RPC with prio %v", rpc.prio)
 		}
 		if rpc.prio.prio == "hi" {
 			time.Sleep(5 * time.Second)
 		} else {
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond)
 		}
 	}
 }
@@ -116,9 +116,9 @@ func SendRPCNoAequitas() {
 		rpc.size = size
 
 		if completed {
-			log.Printf("completed an RPC with prio %v", rpc.prio)
+			log.Printf("completed an RPC with prio %v", rpc.prio.prio)
 		} else {
-			log.Printf("falied to complete an RPC with prio %v", rpc.prio)
+			log.Printf("falied to complete an RPC with prio %v", rpc.prio.prio)
 		}
 	}
 }
