@@ -1,0 +1,13 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+ name: aequitas-deployment
+spec:
+ selector:
+   app: aequitas-server
+ ports:
+ - port: 80
+   targetPort: 3000
+   protocol: TCP
+ type: LoadBalancer

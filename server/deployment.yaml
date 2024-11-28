@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aequitas-deployment
+  labels:
+    app: aequitas-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aequitas-server
+  template:
+    metadata:
+      labels:
+        app: aequitas-server
+    spec:
+      containers:
+      - name: aequitas-deployment
+        image: mkurowski/server
+        ports:
+        - containerPort: 2220
+        - containerPort: 2222
+        - containerPort: 2224
