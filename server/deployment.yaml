@@ -3,12 +3,12 @@ kind: Deployment
 metadata:
   name: aequitas-deployment
   labels:
-    app: aequitas-server
+    name: aequitas-server
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
-      app: aequitas-server
+      name: aequitas-server
   template:
     metadata:
       labels:
@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
       - name: aequitas-deployment
-        image: mkurowski/server
+        image: server
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 2220
         - containerPort: 2222
