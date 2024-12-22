@@ -14,9 +14,9 @@ spec:
       labels:
         app: aequitas-server
     spec:
+      hostname: aeuquitas-server
       containers:
-      - name: aequitas-deployment
-        image: server
+      - image: server
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 2220

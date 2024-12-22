@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"flag"
+	"fmt"
 	"log"
 	"magisterium/utils"
 	"os"
@@ -10,6 +12,7 @@ import (
 )
 
 var noAequitas bool
+var stderr bytes.Buffer
 
 func main() {
 
@@ -24,11 +27,24 @@ func main() {
 
 	log.Printf("shaping traffic...")
 	tc := exec.Command("./tc-on-host.sh")
-	if err := tc.Run(); err != nil {
+	if err = tc.Run(); err != nil {
 		log.Fatalf("failed to apply traffic control, error: %v", err)
 	}
 	log.Printf("traffic control added")
 	utils.AequitasInit(15, 98)
+
+	//remember to run the container with --mount flag. It will enable you to collect the generated logs.
+	tcpdump := exec.Command("./run-tcpdump.sh")
+	tcpdump.Stderr = &stderr
+
+	go func() {
+		err = tcpdump.Run()
+
+		if err != nil {
+			fmt.Printf("error: %v: %v", err, stderr.String())
+			log.Fatalf("failed to start capturing traffic data, error: %v", err)
+		}
+	}()
 
 	log.Printf("sending RPCs...")
 	//weighted random selection of priorities required

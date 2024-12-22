@@ -3,6 +3,7 @@ module magisterium
 go 1.22.3
 
 require (
+	github.com/google/gopacket v1.1.19
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.34.2
