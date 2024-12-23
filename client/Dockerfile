@@ -14,9 +14,12 @@ COPY /utils/ /builder/utils
 
 COPY go.mod go.sum tc-on-host.sh run-tcpdump.sh /builder/
 
-RUN go build -o client ./client/
+WORKDIR /builder/client
+
+RUN go build
 
 EXPOSE 2220 2222 2224
 
-CMD [ "sleep", "2073600" ]
-# ENTRYPOINT [ "client/client" ]
+WORKDIR /builder
+
+ENTRYPOINT [ "./client/client" ]
