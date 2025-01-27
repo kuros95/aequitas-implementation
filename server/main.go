@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
-	"magisterium/stayalive"
+	sendmessage "magisterium/sendmess"
 	"net"
 	"strconv"
 
@@ -16,14 +16,14 @@ var port int
 var size int
 
 type gRPCServer struct {
-	stayalive.UnimplementedStayAliveServiceServer
+	sendmessage.UnimplementedSendMessageServiceServer
 }
 
-func (m *gRPCServer) StayAlive(ctx context.Context, request *stayalive.StayAliveRequest) (*stayalive.StayAliveResponse, error) {
+func (m *gRPCServer) SendMessage(ctx context.Context, request *sendmessage.SendMessageRequest) (*sendmessage.SendMessageResponse, error) {
 	md, _ := metadata.FromIncomingContext(ctx)
 	prio := md.Get("prio")[0]
 	log.Printf("Got prio: %v. Sending response...", prio)
-	return &stayalive.StayAliveResponse{
+	return &sendmessage.SendMessageResponse{
 		AliveResp: bool(true),
 		Size:      int32(size),
 	}, nil
@@ -77,7 +77,7 @@ func main() {
 	realSize := size * 1024
 	s := grpc.NewServer(grpc.MaxRecvMsgSize(realSize))
 	gRPCServer := &gRPCServer{}
-	stayalive.RegisterStayAliveServiceServer(s, gRPCServer)
+	sendmessage.RegisterSendMessageServiceServer(s, gRPCServer)
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)

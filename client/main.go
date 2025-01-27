@@ -12,11 +12,14 @@ import (
 )
 
 var noAequitas bool
+var use64 bool
 var stderr bytes.Buffer
 
 func main() {
 
 	flag.BoolVar(&noAequitas, "n", false, "do not use the aequitas algorithm")
+	flag.BoolVar(&use64, "u", false, "use 64kb payload for messages")
+
 	logFile, err := os.Create("client.log")
 	if err != nil {
 		log.Fatalf("failed to create logfile, error: %v", err)
@@ -51,9 +54,9 @@ func main() {
 	for {
 
 		if noAequitas {
-			go utils.SendRPCNoAequitas()
+			go utils.SendRPCNoAequitas(use64)
 		} else if !noAequitas {
-			go utils.SendRPC()
+			go utils.SendRPC(use64)
 		}
 
 		time.Sleep(time.Millisecond)

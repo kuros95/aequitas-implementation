@@ -3,7 +3,7 @@ package utils
 import (
 	"context"
 	"log"
-	"magisterium/stayalive"
+	sendmessage "magisterium/sendmess"
 	"time"
 
 	"golang.org/x/exp/rand"
@@ -51,7 +51,7 @@ func (r rpc) send() (bool, time.Duration, int) {
 		return false, 0, 0
 	}
 	defer conn.Close()
-	c := stayalive.NewStayAliveServiceClient(conn)
+	c := sendmessage.NewSendMessageServiceClient(conn)
 
 	header := metadata.New(map[string]string{
 		"prio": r.prio.prio,
@@ -63,10 +63,10 @@ func (r rpc) send() (bool, time.Duration, int) {
 	ctxWithMD := metadata.NewOutgoingContext(ctx, header)
 
 	start := time.Now()
-	resp, err := c.StayAlive(ctxWithMD, &stayalive.StayAliveRequest{})
+	resp, err := c.SendMessage(ctxWithMD, &sendmessage.SendMessageRequest{})
 	log.Printf("sending RPC with priority: %v to %v \n", r.prio.prio, sock)
 	if err != nil {
-		log.Printf("error calling function StayAlive: %v", err)
+		log.Printf("error calling function SendMessage: %v", err)
 		return false, 0, 0
 	}
 	r.elapsed = time.Since(start)
@@ -74,9 +74,14 @@ func (r rpc) send() (bool, time.Duration, int) {
 	return resp.GetAliveResp(), r.elapsed, int(resp.GetSize())
 }
 
-func SendRPC() {
+func SendRPC(use_64kb_payload bool) {
 	var rpc rpc
 	prio_to_assign := prios[rand.Intn(len(prios))]
+	if use_64kb_payload {
+		rpc.size = 64
+	} else {
+		rpc.size = 32
+	}
 
 	for {
 		if rand.Float64() <= prio_to_assign.p_admit {
@@ -91,24 +96,29 @@ func SendRPC() {
 		rpc.size = size
 
 		if completed {
-			log.Printf("completed an RPC with prio %v", rpc.prio.prio)
+			log.Printf("completed an RPC of size %v with prio %v", rpc.size, rpc.prio.prio)
 			rpc.admit()
 		} else {
-			log.Printf("falied to complete an RPC with prio %v, lowering priority", rpc.prio.prio)
+			log.Printf("falied to complete an RPC of size %v with prio %v, lowering priority", rpc.size, rpc.prio.prio)
 			rpc.isLowered = true
 		}
-		if rpc.prio.prio == "hi" {
-			time.Sleep(5 * time.Second)
-		} else {
-			time.Sleep(time.Millisecond)
-		}
+		// if rpc.prio.prio == "hi" {
+		// 	time.Sleep(5 * time.Second)
+		// } else {
+		// 	time.Sleep(time.Millisecond)
+		// }
 	}
 }
 
-func SendRPCNoAequitas() {
+func SendRPCNoAequitas(use_64kb_payload bool) {
 	var rpc rpc
 	prio_to_assign := prios[rand.Intn(len(prios))].prio
 	rpc.prio.prio = prio_to_assign
+	if use_64kb_payload {
+		rpc.size = 64
+	} else {
+		rpc.size = 32
+	}
 
 	for {
 		completed, elapsed, size := rpc.send()
