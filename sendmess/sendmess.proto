@@ -1,0 +1,17 @@
+syntax = "proto3";
+option go_package = "./sendmessage/sendmessage";
+
+message SendMessageRequest {
+    string aliveReq = 1;
+    string payload = 2;
+}
+
+message SendMessageResponse {
+    bool aliveResp = 1;
+    int32 size = 2;
+    string payload = 3;
+}
+
+service SendMessageService {
+  rpc SendMessage(SendMessageRequest) returns(SendMessageResponse) {}
+}
