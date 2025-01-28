@@ -4,13 +4,13 @@ go 1.22.3
 
 require (
 	github.com/google/gopacket v1.1.19
+	github.com/mroth/weightedrand v1.0.0
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.34.2
 )
 
 require (
-	github.com/mroth/weightedrand v1.0.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
