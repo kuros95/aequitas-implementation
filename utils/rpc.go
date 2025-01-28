@@ -53,7 +53,7 @@ func (r rpc) send() (bool, time.Duration, int32) {
 	conn, err := grpc.NewClient(sock, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("failed to connect to gRPC server at %v: %v", sock, err)
-		return false, 0, 0
+		return false, 0, r.size
 	}
 	defer conn.Close()
 	c := sendmessage.NewSendMessageServiceClient(conn)
@@ -72,7 +72,7 @@ func (r rpc) send() (bool, time.Duration, int32) {
 	buff := make([]byte, bufferSize)
 	if err != nil {
 		fmt.Printf("failed to open request payload: %v", err)
-		return false, 0, 0
+		return false, 0, r.size
 	}
 	defer file.Close()
 
@@ -82,7 +82,7 @@ func (r rpc) send() (bool, time.Duration, int32) {
 		bytesRead, err := file.Read(buff)
 		if err != nil {
 			if err != io.EOF {
-				fmt.Printf("failed to read request payload: %v", err)
+				log.Printf("failed to read request payload: %v", err)
 			}
 			break
 		}
@@ -99,7 +99,7 @@ func (r rpc) send() (bool, time.Duration, int32) {
 	log.Printf("sending RPC with priority: %v to %v \n", r.prio.prio, sock)
 	if err != nil {
 		log.Printf("error calling function SendMessage: %v", err)
-		return false, 0, 0
+		return false, 0, r.size
 	}
 	r.elapsed = time.Since(start)
 
@@ -143,10 +143,10 @@ func SendRPC(use_64kb_payload bool) {
 		rpc.size = size
 
 		if completed {
-			log.Printf("completed an RPC of size %v with prio %v in %v", rpc.size, rpc.prio.prio, rpc.elapsed)
+			log.Printf("completed an RPC of size %vkb with prio %v in %v", rpc.size, rpc.prio.prio, rpc.elapsed)
 			rpc.admit()
 		} else {
-			log.Printf("falied to complete an RPC of size %v with prio %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.elapsed)
+			log.Printf("falied to complete an RPC of size %vkb with prio %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.elapsed)
 			rpc.isLowered = true
 		}
 

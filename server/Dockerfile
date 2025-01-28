@@ -6,13 +6,13 @@ ENV CGO_ENABLED=0
 
 WORKDIR /builder
 
-RUN mkdir server && mkdir stayalive
+RUN mkdir server && mkdir sendmess
 
 COPY ./server/main.go /builder/server
 
-COPY /stayalive/ /builder/stayalive
+COPY /sendmess/ /builder/sendmess
 
-COPY go.mod go.sum /builder/
+COPY go.mod go.sum 32kb-payload 64kb-payload /builder/
 
 RUN go build -tags netgo -a -v -o server ./server/
 

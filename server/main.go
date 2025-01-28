@@ -30,10 +30,10 @@ func (m *gRPCServer) SendMessage(ctx context.Context, request *sendmessage.SendM
 	file, err := os.Open(request.Payload)
 	buff := make([]byte, bufferSize)
 	if err != nil {
-		fmt.Printf("failed to open response payload: %v", err)
+		log.Printf("failed to open response payload: %v", err)
 		return &sendmessage.SendMessageResponse{
 			AliveResp: bool(false),
-			Size:      0,
+			Size:      size,
 			Payload:   "",
 			MessChunk: make([]byte, 0),
 		}, err

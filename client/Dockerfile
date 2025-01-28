@@ -2,17 +2,17 @@ FROM golang:1.23 AS builder
 
 WORKDIR /builder
 
-RUN mkdir client && mkdir stayalive && mkdir aequitas 
+RUN mkdir client && mkdir sendmess && mkdir aequitas 
 
 RUN apt-get update && apt-get install iproute2 tcpdump -y 
 
 COPY ./client/main.go /builder/client
 
-COPY /stayalive/ /builder/stayalive
+COPY /sendmess/ /builder/sendmess
 
 COPY /utils/ /builder/utils
 
-COPY go.mod go.sum tc-on-host.sh run-tcpdump.sh /builder/
+COPY go.mod go.sum tc-on-host.sh run-tcpdump.sh 32kb-payload 64kb-payload /builder/
 
 WORKDIR /builder/client
 
