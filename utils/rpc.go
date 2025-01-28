@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	wr "github.com/mroth/weightedrand"
 	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -107,7 +108,22 @@ func (r rpc) send() (bool, time.Duration, int32) {
 
 func SendRPC(use_64kb_payload bool) {
 	var rpc rpc
-	prio_to_assign := prios[rand.Intn(len(prios))]
+
+	chooser, _ := wr.NewChooser(
+		wr.Choice{Item: "hi", Weight: 7},
+		wr.Choice{Item: "lo", Weight: 3},
+	)
+	var indexof int
+
+	prio_name := chooser.Pick().(string)
+
+	if prio_name == "hi" {
+		indexof = 0
+	} else if prio_name == "lo" {
+		indexof = 1
+	}
+
+	prio_to_assign := prios[indexof]
 	if use_64kb_payload {
 		rpc.size = 64
 	} else {
