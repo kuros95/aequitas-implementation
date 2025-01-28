@@ -2,8 +2,12 @@ package utils
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log"
 	sendmessage "magisterium/sendmess"
+	"os"
+	"strconv"
 	"time"
 
 	"golang.org/x/exp/rand"
@@ -16,7 +20,7 @@ type rpc struct {
 	prio
 	isLowered bool
 	elapsed   time.Duration
-	size      int
+	size      int32
 }
 
 type prio struct {
@@ -30,7 +34,7 @@ type prio struct {
 
 var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 85, 0, 1, time.Now()}}
 
-func (r rpc) send() (bool, time.Duration, int) {
+func (r rpc) send() (bool, time.Duration, int32) {
 	if r.isLowered {
 		r.prio.prio = "be"
 	}
@@ -62,8 +66,35 @@ func (r rpc) send() (bool, time.Duration, int) {
 
 	ctxWithMD := metadata.NewOutgoingContext(ctx, header)
 
+	bufferSize := r.size * 1024
+	file, err := os.Open(strconv.Itoa(int(r.size)) + "kb-payload")
+	buff := make([]byte, bufferSize)
+	if err != nil {
+		fmt.Printf("failed to open request payload: %v", err)
+		return false, 0, 0
+	}
+	defer file.Close()
+
+	var messChunk []byte
+
+	for {
+		bytesRead, err := file.Read(buff)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("failed to read request payload: %v", err)
+			}
+			break
+		}
+		messChunk = buff[:bytesRead]
+	}
+
 	start := time.Now()
-	resp, err := c.SendMessage(ctxWithMD, &sendmessage.SendMessageRequest{})
+	resp, err := c.SendMessage(ctxWithMD, &sendmessage.SendMessageRequest{
+		AliveReq:  "Alive?",
+		Size:      r.size,
+		Payload:   strconv.Itoa(int(r.size)) + "kb-payload",
+		MessChunk: messChunk,
+	})
 	log.Printf("sending RPC with priority: %v to %v \n", r.prio.prio, sock)
 	if err != nil {
 		log.Printf("error calling function SendMessage: %v", err)
@@ -71,7 +102,7 @@ func (r rpc) send() (bool, time.Duration, int) {
 	}
 	r.elapsed = time.Since(start)
 
-	return resp.GetAliveResp(), r.elapsed, int(resp.GetSize())
+	return resp.GetAliveResp(), r.elapsed, resp.GetSize()
 }
 
 func SendRPC(use_64kb_payload bool) {
@@ -96,17 +127,15 @@ func SendRPC(use_64kb_payload bool) {
 		rpc.size = size
 
 		if completed {
-			log.Printf("completed an RPC of size %v with prio %v", rpc.size, rpc.prio.prio)
+			log.Printf("completed an RPC of size %v with prio %v in %v", rpc.size, rpc.prio.prio, rpc.elapsed)
 			rpc.admit()
 		} else {
-			log.Printf("falied to complete an RPC of size %v with prio %v, lowering priority", rpc.size, rpc.prio.prio)
+			log.Printf("falied to complete an RPC of size %v with prio %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.elapsed)
 			rpc.isLowered = true
 		}
-		// if rpc.prio.prio == "hi" {
-		// 	time.Sleep(5 * time.Second)
-		// } else {
-		// 	time.Sleep(time.Millisecond)
-		// }
+
+		time.Sleep(time.Millisecond)
+
 	}
 }
 

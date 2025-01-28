@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"io"
 	"log"
 	sendmessage "magisterium/sendmess"
 	"net"
+	"os"
 	"strconv"
 
 	"google.golang.org/grpc"
@@ -13,7 +16,6 @@ import (
 )
 
 var port int
-var size int
 
 type gRPCServer struct {
 	sendmessage.UnimplementedSendMessageServiceServer
@@ -22,10 +24,41 @@ type gRPCServer struct {
 func (m *gRPCServer) SendMessage(ctx context.Context, request *sendmessage.SendMessageRequest) (*sendmessage.SendMessageResponse, error) {
 	md, _ := metadata.FromIncomingContext(ctx)
 	prio := md.Get("prio")[0]
+	size := request.GetSize()
+
+	bufferSize := size * 1024
+	file, err := os.Open(request.Payload)
+	buff := make([]byte, bufferSize)
+	if err != nil {
+		fmt.Printf("failed to open response payload: %v", err)
+		return &sendmessage.SendMessageResponse{
+			AliveResp: bool(false),
+			Size:      0,
+			Payload:   "",
+			MessChunk: make([]byte, 0),
+		}, err
+	}
+	defer file.Close()
+
+	var messChunk []byte
+
+	for {
+		bytesRead, err := file.Read(buff)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("failed to read response payload: %v", err)
+			}
+			break
+		}
+		messChunk = buff[:bytesRead]
+	}
+
 	log.Printf("Got prio: %v. Sending response...", prio)
 	return &sendmessage.SendMessageResponse{
 		AliveResp: bool(true),
-		Size:      int32(size),
+		Size:      size,
+		Payload:   file.Name(),
+		MessChunk: messChunk,
 	}, nil
 }
 
@@ -58,7 +91,6 @@ func getIP(iface string) string {
 func main() {
 
 	flag.IntVar(&port, "p", 1, "port on which to run rpc server")
-	flag.IntVar(&size, "s", 32, "max rpc message size in kilobytes")
 	flag.Parse()
 
 	if port == 1 {
@@ -74,8 +106,7 @@ func main() {
 		log.Fatalf("failed to listen : %v", err)
 	}
 
-	realSize := size * 1024
-	s := grpc.NewServer(grpc.MaxRecvMsgSize(realSize))
+	s := grpc.NewServer()
 	gRPCServer := &gRPCServer{}
 	sendmessage.RegisterSendMessageServiceServer(s, gRPCServer)
 	log.Printf("server listening at %v", lis.Addr())
