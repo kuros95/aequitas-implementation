@@ -35,7 +35,7 @@ type prio struct {
 
 var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 85, 0, 1, time.Now()}}
 
-func (r rpc) send(add_inc, mul_dec, min_adm float64) (bool, time.Duration, int32) {
+func (r rpc) send() (bool, time.Duration, int32) {
 	if r.isLowered {
 		r.prio.prio = "be"
 	}
@@ -138,7 +138,7 @@ func SendRPC(use_64kb_payload bool, add_inc, mul_dec, min_adm float64) {
 			rpc.isLowered = true
 		}
 
-		completed, elapsed, size := rpc.send(add_inc, mul_dec, min_adm float64)
+		completed, elapsed, size := rpc.send()
 		rpc.elapsed = elapsed
 		rpc.size = size
 
