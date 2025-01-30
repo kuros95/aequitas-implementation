@@ -45,6 +45,7 @@ func main() {
 	}
 	log.Printf("traffic control added")
 	utils.AequitasInit(lat_tgt, tgt_pctl)
+	log.Printf("Aequitas initiated with latency target %vms, and target percentile of completed RPCs %v", lat_tgt, tgt_pctl)
 
 	tcpdump := exec.Command("./run-tcpdump.sh")
 	tcpdump.Stderr = &stderr
@@ -58,7 +59,12 @@ func main() {
 		}
 	}()
 
-	log.Printf("sending RPCs...")
+	if noAequitas {
+		log.Printf("sending RPCs...")
+	} else {
+		log.Printf("sending RPCs with additive increase set to %v, multiplicative decrease set to %v, and minimum admission probability set to %v", add_inc, mul_dec, min_adm)
+	}
+
 	for {
 
 		if noAequitas {
