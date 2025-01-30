@@ -35,7 +35,7 @@ type prio struct {
 
 var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 85, 0, 1, time.Now()}}
 
-func (r rpc) send() (bool, time.Duration, int32) {
+func (r rpc) send(add_inc, mul_dec, min_adm float64) (bool, time.Duration, int32) {
 	if r.isLowered {
 		r.prio.prio = "be"
 	}
@@ -106,7 +106,7 @@ func (r rpc) send() (bool, time.Duration, int32) {
 	return resp.GetAliveResp(), r.elapsed, resp.GetSize()
 }
 
-func SendRPC(use_64kb_payload bool) {
+func SendRPC(use_64kb_payload bool, add_inc, mul_dec, min_adm float64) {
 	var rpc rpc
 
 	chooser, _ := wr.NewChooser(
@@ -138,13 +138,13 @@ func SendRPC(use_64kb_payload bool) {
 			rpc.isLowered = true
 		}
 
-		completed, elapsed, size := rpc.send()
+		completed, elapsed, size := rpc.send(add_inc, mul_dec, min_adm float64)
 		rpc.elapsed = elapsed
 		rpc.size = size
 
 		if completed {
 			log.Printf("completed an RPC of size %vkb with prio %v in %v", rpc.size, rpc.prio.prio, rpc.elapsed)
-			rpc.admit()
+			rpc.admit(add_inc, mul_dec, min_adm)
 		} else {
 			log.Printf("falied to complete an RPC of size %vkb with prio %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.elapsed)
 			rpc.isLowered = true
