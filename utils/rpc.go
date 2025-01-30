@@ -171,9 +171,9 @@ func SendRPCNoAequitas(use_64kb_payload bool) {
 		rpc.size = size
 
 		if completed {
-			log.Printf("completed an RPC with prio %v", rpc.prio.prio)
+			log.Printf("completed an RPC of size %vkb with prio %v in %v", rpc.size, rpc.prio.prio, rpc.elapsed)
 		} else {
-			log.Printf("falied to complete an RPC with prio %v", rpc.prio.prio)
+			log.Printf("falied to complete an RPC of size %vkb with prio %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.elapsed)
 		}
 	}
 }

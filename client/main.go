@@ -44,8 +44,11 @@ func main() {
 		log.Fatalf("failed to apply traffic control, error: %v", err)
 	}
 	log.Printf("traffic control added")
-	utils.AequitasInit(lat_tgt, tgt_pctl)
-	log.Printf("Aequitas initiated with latency target %vms, and target percentile of completed RPCs %v", lat_tgt, tgt_pctl)
+
+	if !noAequitas {
+		utils.AequitasInit(lat_tgt, tgt_pctl)
+		log.Printf("Aequitas initiated with latency target %vms, and target percentile of completed RPCs %v", lat_tgt, tgt_pctl)
+	}
 
 	tcpdump := exec.Command("./run-tcpdump.sh")
 	tcpdump.Stderr = &stderr
