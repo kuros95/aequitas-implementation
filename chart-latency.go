@@ -62,12 +62,12 @@ func chart() {
 	var title string
 	var prio string
 	if strings.Contains(os.Args[1], "hi") {
-		prio = "wysokim"
+		prio = " wysokim"
 	} else {
-		prio = "niskim"
+		prio = " niskim"
 	}
 	if strings.Contains(os.Args[1], "-n-") {
-		title = "bez Aeqitasa"
+		title = " bez Aeqitasa"
 	}
 	itemsForChart := chartItems()
 	line.SetXAxis(itemsForChart[0]).
