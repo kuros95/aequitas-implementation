@@ -3,3 +3,6 @@ clientData
 unused
 *.tmp
 *.html
+*.csv
+*.txt
+tests/socketTests
