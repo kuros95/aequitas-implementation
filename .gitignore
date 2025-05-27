@@ -6,3 +6,4 @@ unused
 *.csv
 *.txt
 tests/socketTests
+tests/results

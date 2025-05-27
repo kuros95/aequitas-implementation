@@ -38,13 +38,13 @@ def readAndChart(firstFile, secondFile):
     plt.plot(x, y)
     plt.plot(x1, y1)
     plt.xlabel("Czas [s]")
-    plt.ylabel("Przepływność [Mb/s]")
+    plt.ylabel("Przepływność [MB/s]")
     plt.xticks(np.arange(0, 60, step=10))
     plt.yticks(np.arange(0, 100, step=10))
     # ax = plt.gca()
     # ax.set_ylim([0, 100])
     plt.show()
-    plt.savefig(firstFile + ".jpg")
+    plt.savefig(firstFile + ".png")
 
 if __name__ == "__main__":
     firstFilename = os.path.join(here, sys.argv[1])

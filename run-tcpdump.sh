@@ -1,3 +1,3 @@
 #!/bin/bash
 
-tcpdump -i eth0 -e -l > dump.log
+tcpdump -i eth0 -e -l -v > dump.log

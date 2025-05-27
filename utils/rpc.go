@@ -2,12 +2,15 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	sendmessage "magisterium/sendmess"
+	"net"
 	"os"
 	"strconv"
+	"syscall"
 	"time"
 
 	wr "github.com/mroth/weightedrand"
@@ -36,21 +39,24 @@ type prio struct {
 var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 85, 0, 1, time.Now()}}
 
 func (r rpc) send() (bool, time.Duration, int32) {
+	//The int value for 0x20 is 32, and for 0x40 is 64.
+	//0x20 is for low priority, 0x40 is for high priority.
 	if r.isLowered {
 		r.prio.prio = "be"
 	}
-	var sock string
+	sock := "172.17.0.2:2222"
+	var dscp string
 	if r.prio.prio == "hi" {
-		sock = "172.17.0.2:2220"
+		dscp = "64"
 	}
 	if r.prio.prio == "lo" {
-		sock = "172.17.0.3:2222"
+		dscp = "32"
 	}
 	if r.prio.prio == "be" {
-		sock = "172.17.0.4:2224"
+		dscp = "0"
 	}
 
-	conn, err := grpc.NewClient(sock, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(sock, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(setDscp(dscp)))
 	if err != nil {
 		log.Fatalf("failed to connect to gRPC server at %v: %v", sock, err)
 		return false, 0, r.size
@@ -60,6 +66,7 @@ func (r rpc) send() (bool, time.Duration, int32) {
 
 	header := metadata.New(map[string]string{
 		"prio": r.prio.prio,
+		"dscp": dscp,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -191,5 +198,38 @@ func SendRPCNoAequitas(use_64kb_payload bool) {
 		} else {
 			log.Printf("falied to complete an RPC of size %vkb with prio %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.elapsed)
 		}
+	}
+}
+
+func setDscp(dscp string) func(context.Context, string) (net.Conn, error) {
+	return func(ctx context.Context, addr string) (net.Conn, error) {
+		//The int value for 0x20 is 32, and for 0x40 is 64.
+		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", "172.17.0.2:2222")
+		if err != nil {
+			return nil, err
+		}
+
+		tcpConn, ok := conn.(*net.TCPConn)
+		if !ok {
+			err = errors.New("connection is not a TCP connection")
+			return nil, err
+		}
+
+		f, err := tcpConn.File()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get file descriptor: %w", err)
+		}
+
+		tos, err := strconv.Atoi(dscp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert DSCP value %s to int: %w", dscp, err)
+		}
+
+		err = syscall.SetsockoptInt(int(f.Fd()), syscall.IPPROTO_IP, syscall.IP_TOS, tos)
+		if err != nil {
+			return nil, fmt.Errorf("failed to set DSCP option: %w", err)
+		}
+
+		return conn, nil
 	}
 }

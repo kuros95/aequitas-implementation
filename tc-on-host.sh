@@ -12,13 +12,13 @@ tc class add dev eth0 parent 1:1 classid 1:2 htb rate 100mbps ceil 350mbps
 tc class add dev eth0 parent 1:1 classid 1:3 htb rate 400mbps ceil 1150mbps
 tc class add dev eth0 parent 1:1 classid 1:4 htb rate 200mbps ceil 300mbps
 
-tc filter add dev eth0 protocol ip parent 1: prio 1 u32 match ip src $src_ip \
-        match ip dport 2220 0xffff flowid 1:2
-tc filter add dev eth0 protocol ip parent 1: prio 2 u32 match ip src $src_ip \
-        match ip dport 2222 0xffff flowid 1:3
+tc filter add dev eth0 protocol ip parent 1: u32 match ip dsfield 0x20 0x1e classid 1:2
+tc filter add dev eth0 protocol ip parent 1: u32 match ip dsfield 0x40 0x1e classid 1:3
 
 tc qdisc add dev eth0 parent 1:2 handle 12: sfq perturb 10
 tc qdisc add dev eth0 parent 1:3 handle 13: sfq perturb 10
 tc qdisc add dev eth0 parent 1:4 handle 14: sfq perturb 10
 
 echo "traffic control added"
+
+# The int value for 0x20 is 32, and for 0x40 is 64.

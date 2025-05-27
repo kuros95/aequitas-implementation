@@ -20,5 +20,8 @@ tc qdisc add dev eth0 parent 1:3 handle 13: sfq perturb 10
 echo "traffic control added"
 
 #iperf3 -t 60 -c 172.17.0.3 -p 2222 --logfile b-5-5-2
+#iperf3 -t 60 -c 172.17.0.3 -S 0x10 --logfile b-5-5-2
+#jeden z serwerów musi mieć podany port. W innym wypadku iperf się nie uruchomi. 
+#To wygląda jak posiadanie domyślnego portu 5201.
 #iperf3 -s -p 2222
 #iperf3 -t 60 -c 172.17.0.3 -p 2222 -u -b 4G --logfile b-5-5-2-u
