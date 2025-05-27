@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# This script counts the number of completed tasks for each priority level (hi, lo) in a given file and logs the results by second.
 file=$1
 echo time, hi, lo, all > $file-mix.log
 seconds=$(echo $(cat $file | cut -d " " -f 2 | awk '!seen[$0]++'))

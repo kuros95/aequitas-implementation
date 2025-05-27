@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#This script counts the number of completed and sent tasks for each priority level (hi, lo, be) in a given file.
 file=$1
 
 
