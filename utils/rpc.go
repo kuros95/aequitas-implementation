@@ -115,10 +115,6 @@ func (r rpc) send() (bool, time.Duration, int32) {
 	res := resp.GetAliveResp()
 	elapsed := r.elapsed
 	size := resp.GetSize()
-
-	if err != nil {
-		log.Printf("closing connection error: %v", err)
-	}
 	fmt.Println("response:", res, "elapsed time:", elapsed, "size:", size)
 	return res, elapsed, size
 }

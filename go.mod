@@ -6,9 +6,7 @@ toolchain go1.23.4
 
 require (
 	github.com/go-echarts/go-echarts/v2 v2.5.4
-	github.com/google/gopacket v1.1.19
 	github.com/mroth/weightedrand v1.0.0
-	github.com/zenthangplus/goccm v1.1.3
 	golang.org/x/exp v0.0.0-20250531010427-b6e5de432a8b
 	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
