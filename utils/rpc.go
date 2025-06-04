@@ -37,15 +37,15 @@ type prio struct {
 }
 
 var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 85, 0, 1, time.Now()}}
+var sock = "172.17.0.2:2222"
 
 func (r rpc) send() (bool, time.Duration, int32) {
+	var dscp string
 	//The int value for 0x20 is 32, and for 0x40 is 64.
 	//0x20 is for low priority, 0x40 is for high priority.
 	if r.isLowered {
 		r.prio.prio = "be"
 	}
-	sock := "172.17.0.2:2222"
-	var dscp string
 	if r.prio.prio == "hi" {
 		dscp = "64"
 	}
@@ -56,22 +56,19 @@ func (r rpc) send() (bool, time.Duration, int32) {
 		dscp = "0"
 	}
 
+	header := metadata.New(map[string]string{
+		"prio": r.prio.prio,
+	})
+
 	conn, err := grpc.NewClient(sock, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(setDscp(dscp)))
 	if err != nil {
 		log.Fatalf("failed to connect to gRPC server at %v: %v", sock, err)
 		return false, 0, r.size
 	}
 	defer conn.Close()
-	c := sendmessage.NewSendMessageServiceClient(conn)
 
-	header := metadata.New(map[string]string{
-		"prio": r.prio.prio,
-		"dscp": dscp,
-	})
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), r.prio.latency)
 	defer cancel()
-
 	ctxWithMD := metadata.NewOutgoingContext(ctx, header)
 
 	bufferSize := r.size * 1024
@@ -81,7 +78,6 @@ func (r rpc) send() (bool, time.Duration, int32) {
 		fmt.Printf("failed to open request payload: %v", err)
 		return false, 0, r.size
 	}
-	defer file.Close()
 
 	var messChunk []byte
 
@@ -95,6 +91,12 @@ func (r rpc) send() (bool, time.Duration, int32) {
 		}
 		messChunk = buff[:bytesRead]
 	}
+	err = file.Close()
+	if err != nil {
+		log.Printf("failed to close request payload file: %v", err)
+	}
+
+	c := sendmessage.NewSendMessageServiceClient(conn)
 
 	start := time.Now()
 	resp, err := c.SendMessage(ctxWithMD, &sendmessage.SendMessageRequest{
@@ -110,10 +112,18 @@ func (r rpc) send() (bool, time.Duration, int32) {
 	}
 	r.elapsed = time.Since(start)
 
-	return resp.GetAliveResp(), r.elapsed, resp.GetSize()
+	res := resp.GetAliveResp()
+	elapsed := r.elapsed
+	size := resp.GetSize()
+
+	if err != nil {
+		log.Printf("closing connection error: %v", err)
+	}
+	fmt.Println("response:", res, "elapsed time:", elapsed, "size:", size)
+	return res, elapsed, size
 }
 
-func SendRPC(use_64kb_payload bool, add_inc, mul_dec, min_adm float64) {
+func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float64) {
 	var rpc rpc
 
 	chooser, _ := wr.NewChooser(
@@ -137,66 +147,35 @@ func SendRPC(use_64kb_payload bool, add_inc, mul_dec, min_adm float64) {
 		rpc.size = 32
 	}
 
-	for {
+	if !noAequitas {
 		if rand.Float64() <= prio_to_assign.p_admit {
-			rpc.prio.prio = prio_to_assign.prio
+			rpc.prio = prio_to_assign
 		} else {
 			rpc.prio.prio = "be"
 			rpc.isLowered = true
 		}
-
-		completed, elapsed, size := rpc.send()
-		rpc.elapsed = elapsed
-		rpc.size = size
-
-		if completed {
-			log.Printf("completed an RPC of size %vkb with prio %v in %v", rpc.size, rpc.prio.prio, rpc.elapsed)
-			rpc.admit(add_inc, mul_dec, min_adm)
-		} else {
-			log.Printf("falied to complete an RPC of size %vkb with prio %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.elapsed)
-			rpc.isLowered = true
-		}
-
-		time.Sleep(time.Millisecond)
-
-	}
-}
-
-func SendRPCNoAequitas(use_64kb_payload bool) {
-	var rpc rpc
-
-	chooser, _ := wr.NewChooser(
-		wr.Choice{Item: "hi", Weight: 7},
-		wr.Choice{Item: "lo", Weight: 3},
-	)
-	var indexof int
-
-	prio_name := chooser.Pick().(string)
-
-	if prio_name == "hi" {
-		indexof = 0
-	} else if prio_name == "lo" {
-		indexof = 1
-	}
-
-	prio_to_assign := prios[indexof]
-
-	rpc.prio.prio = prio_to_assign.prio
-	if use_64kb_payload {
-		rpc.size = 64
-	} else {
-		rpc.size = 32
+	} else if noAequitas {
+		rpc.prio = prio_to_assign
 	}
 
 	for {
 		completed, elapsed, size := rpc.send()
 		rpc.elapsed = elapsed
 		rpc.size = size
+		fmt.Println("completed:", completed, "elapsed:", rpc.elapsed, "size:", rpc.size, "priority:", rpc.prio.prio)
 
+		fmt.Println("I'm here!")
 		if completed {
 			log.Printf("completed an RPC of size %vkb with prio %v in %v", rpc.size, rpc.prio.prio, rpc.elapsed)
-		} else {
-			log.Printf("falied to complete an RPC of size %vkb with prio %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.elapsed)
+			fmt.Printf("completed an RPC of size %vkb with prio %v in %v\n", rpc.size, rpc.prio.prio, rpc.elapsed)
+			if !noAequitas {
+				rpc.admit(add_inc, mul_dec, min_adm)
+			}
+		} else if !completed {
+			log.Printf("falied to complete an RPC of size %vkb with prio %v and latency target %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.prio.latency, rpc.elapsed)
+			if !noAequitas {
+				rpc.isLowered = true
+			}
 		}
 	}
 }
@@ -204,7 +183,7 @@ func SendRPCNoAequitas(use_64kb_payload bool) {
 func setDscp(dscp string) func(context.Context, string) (net.Conn, error) {
 	return func(ctx context.Context, addr string) (net.Conn, error) {
 		//The int value for 0x20 is 32, and for 0x40 is 64.
-		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", "172.17.0.2:2222")
+		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", sock)
 		if err != nil {
 			return nil, err
 		}
