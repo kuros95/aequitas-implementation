@@ -115,7 +115,7 @@ func (r rpc) send() (bool, time.Duration, int32) {
 	res := resp.GetAliveResp()
 	elapsed := r.elapsed
 	size := resp.GetSize()
-	fmt.Println("response:", res, "elapsed time:", elapsed, "size:", size)
+	log.Println("response:", res, "elapsed time:", elapsed, "size:", size, "priority:", r.prio.prio)
 	return res, elapsed, size
 }
 
@@ -158,9 +158,8 @@ func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float6
 		completed, elapsed, size := rpc.send()
 		rpc.elapsed = elapsed
 		rpc.size = size
-		fmt.Println("completed:", completed, "elapsed:", rpc.elapsed, "size:", rpc.size, "priority:", rpc.prio.prio)
+		log.Println("completed:", completed, "elapsed:", rpc.elapsed, "size:", rpc.size, "priority:", rpc.prio.prio)
 
-		fmt.Println("I'm here!")
 		if completed {
 			log.Printf("completed an RPC of size %vkb with prio %v in %v", rpc.size, rpc.prio.prio, rpc.elapsed)
 			fmt.Printf("completed an RPC of size %vkb with prio %v in %v\n", rpc.size, rpc.prio.prio, rpc.elapsed)
@@ -168,7 +167,7 @@ func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float6
 				rpc.admit(add_inc, mul_dec, min_adm)
 			}
 		} else if !completed {
-			log.Printf("falied to complete an RPC of size %vkb with prio %v and latency target %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.prio.latency, rpc.elapsed)
+			log.Printf("failed to complete an RPC of size %vkb with prio %v and latency target %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.prio.latency, rpc.elapsed)
 			if !noAequitas {
 				rpc.isLowered = true
 			}

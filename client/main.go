@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"log"
 	"magisterium/utils"
 	"os"
@@ -56,14 +57,14 @@ func main() {
 	tcpdump := exec.Command("./run-tcpdump.sh")
 	tcpdump.Stderr = &stderr
 
-	// go func() {
-	// 	err = tcpdump.Run()
+	go func() {
+		err = tcpdump.Run()
 
-	// 	if err != nil {
-	// 		fmt.Printf("error: %v: %v", err, stderr.String())
-	// 		log.Fatalf("failed to start capturing traffic data, error: %v", err)
-	// 	}
-	// }()
+		if err != nil {
+			fmt.Printf("error: %v: %v", err, stderr.String())
+			log.Fatalf("failed to start capturing traffic data, error: %v", err)
+		}
+	}()
 
 	if noAequitas {
 		log.Printf("sending RPCs...")
