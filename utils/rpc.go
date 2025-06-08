@@ -39,7 +39,8 @@ type prio struct {
 var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 85, 0, 1, time.Now()}}
 var sock = "172.17.0.2:2222"
 
-func (r rpc) send() (bool, time.Duration, int32) {
+func (r rpc) send() (bool, time.Duration, int32, string) {
+
 	var dscp string
 	//The int value for 0x20 is 32, and for 0x40 is 64.
 	//0x20 is for low priority, 0x40 is for high priority.
@@ -60,10 +61,9 @@ func (r rpc) send() (bool, time.Duration, int32) {
 		"prio": r.prio.prio,
 	})
 
-	conn, err := grpc.NewClient(sock, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(setDscp(dscp)))
+	conn, err := grpc.NewClient("passthrough:///"+sock, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(setDscp(dscp)))
 	if err != nil {
 		log.Fatalf("failed to connect to gRPC server at %v: %v", sock, err)
-		return false, 0, r.size
 	}
 	defer conn.Close()
 
@@ -76,7 +76,6 @@ func (r rpc) send() (bool, time.Duration, int32) {
 	buff := make([]byte, bufferSize)
 	if err != nil {
 		fmt.Printf("failed to open request payload: %v", err)
-		return false, 0, r.size
 	}
 
 	var messChunk []byte
@@ -108,15 +107,10 @@ func (r rpc) send() (bool, time.Duration, int32) {
 	log.Printf("sending RPC with priority: %v to %v \n", r.prio.prio, sock)
 	if err != nil {
 		log.Printf("error calling function SendMessage: %v", err)
-		return false, 0, r.size
 	}
 	r.elapsed = time.Since(start)
 
-	res := resp.GetAliveResp()
-	elapsed := r.elapsed
-	size := resp.GetSize()
-	log.Println("response:", res, "elapsed time:", elapsed, "size:", size, "priority:", r.prio.prio)
-	return res, elapsed, size
+	return resp.GetAliveResp(), r.elapsed, resp.GetSize(), r.prio.prio
 }
 
 func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float64) {
@@ -155,14 +149,11 @@ func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float6
 	}
 
 	for {
-		completed, elapsed, size := rpc.send()
-		rpc.elapsed = elapsed
-		rpc.size = size
-		log.Println("completed:", completed, "elapsed:", rpc.elapsed, "size:", rpc.size, "priority:", rpc.prio.prio)
+		completed, elapsed, size, prio := rpc.send()
 
 		if completed {
-			log.Printf("completed an RPC of size %vkb with prio %v in %v", rpc.size, rpc.prio.prio, rpc.elapsed)
-			fmt.Printf("completed an RPC of size %vkb with prio %v in %v\n", rpc.size, rpc.prio.prio, rpc.elapsed)
+			log.Printf("completed an RPC of size %vkb with prio %v in %v", size, prio, elapsed)
+			fmt.Printf("completed an RPC of size %vkb with prio %v in %v\n", size, prio, elapsed)
 			if !noAequitas {
 				rpc.admit(add_inc, mul_dec, min_adm)
 			}
@@ -177,7 +168,7 @@ func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float6
 
 func setDscp(dscp string) func(context.Context, string) (net.Conn, error) {
 	return func(ctx context.Context, addr string) (net.Conn, error) {
-		//The int value for 0x20 is 32, and for 0x40 is 64.
+		// The int value for 0x20 is 32, and for 0x40 is 64.
 		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", sock)
 		if err != nil {
 			return nil, err
@@ -189,18 +180,26 @@ func setDscp(dscp string) func(context.Context, string) (net.Conn, error) {
 			return nil, err
 		}
 
-		f, err := tcpConn.File()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get file descriptor: %w", err)
-		}
-
 		tos, err := strconv.Atoi(dscp)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert DSCP value %s to int: %w", dscp, err)
 		}
 
-		err = syscall.SetsockoptInt(int(f.Fd()), syscall.IPPROTO_IP, syscall.IP_TOS, tos)
+		rawConn, err := tcpConn.SyscallConn()
 		if err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("failed to get syscall.RawConn: %w", err)
+		}
+
+		setErr := rawConn.Control(func(fd uintptr) {
+			err = syscall.SetsockoptInt(int(fd), syscall.IPPROTO_IP, syscall.IP_TOS, tos)
+		})
+		if setErr != nil {
+			conn.Close()
+			return nil, fmt.Errorf("failed to set DSCP option: %w", setErr)
+		}
+		if err != nil {
+			conn.Close()
 			return nil, fmt.Errorf("failed to set DSCP option: %w", err)
 		}
 

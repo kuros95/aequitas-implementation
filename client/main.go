@@ -3,13 +3,15 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"log"
 	"magisterium/utils"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 )
+
+const maxRpcs = 10000
 
 var noAequitas bool
 var noTc bool
@@ -22,6 +24,8 @@ var tgt_pctl int
 var stderr bytes.Buffer
 
 func main() {
+	waitChan := make(chan struct{}, maxRpcs)
+	var wg sync.WaitGroup
 
 	flag.BoolVar(&noAequitas, "n", false, "do not use the aequitas algorithm")
 	flag.BoolVar(&noTc, "t", false, "do not use traffic control")
@@ -57,14 +61,14 @@ func main() {
 	tcpdump := exec.Command("./run-tcpdump.sh")
 	tcpdump.Stderr = &stderr
 
-	go func() {
-		err = tcpdump.Run()
+	// go func() {
+	// 	err = tcpdump.Run()
 
-		if err != nil {
-			fmt.Printf("error: %v: %v", err, stderr.String())
-			log.Fatalf("failed to start capturing traffic data, error: %v", err)
-		}
-	}()
+	// 	if err != nil {
+	// 		fmt.Printf("error: %v: %v", err, stderr.String())
+	// 		log.Fatalf("failed to start capturing traffic data, error: %v", err)
+	// 	}
+	// }()
 
 	if noAequitas {
 		log.Printf("sending RPCs...")
@@ -72,8 +76,15 @@ func main() {
 		log.Printf("sending RPCs with additive increase set to %v, multiplicative decrease set to %v, and minimum admission probability set to %v", add_inc, mul_dec, min_adm)
 	}
 
-	for {
-		go utils.SendRPC(use64, noAequitas, add_inc, mul_dec, min_adm)
-		time.Sleep(time.Duration(lat_tgt) * time.Millisecond)
+	for i := range maxRpcs {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			waitChan <- struct{}{}
+			utils.SendRPC(use64, noAequitas, add_inc, mul_dec, min_adm)
+			time.Sleep(time.Duration(lat_tgt) * time.Millisecond)
+			<-waitChan
+		}(i)
 	}
+	wg.Wait()
 }
