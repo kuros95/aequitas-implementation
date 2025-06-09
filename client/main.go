@@ -8,7 +8,6 @@ import (
 	"magisterium/utils"
 	"os"
 	"os/exec"
-	"sync"
 	"time"
 )
 
@@ -43,8 +42,8 @@ func main() {
 
 	flag.Parse()
 
-	waitChan := make(chan struct{}, maxRpcs)
-	var wg sync.WaitGroup
+	// waitChan := make(chan struct{}, maxRpcs)
+	// var wg sync.WaitGroup
 
 	if !noTc {
 		log.Printf("shaping traffic...")
@@ -60,6 +59,8 @@ func main() {
 		log.Printf("Aequitas initiated with latency target %vms, and target percentile of completed RPCs %v", lat_tgt, tgt_pctl)
 	}
 
+	log.Printf("starting client with %v max RPCs...", maxRpcs)
+
 	tcpdump := exec.Command("./run-tcpdump.sh")
 	tcpdump.Stderr = &stderr
 
@@ -71,6 +72,7 @@ func main() {
 			log.Fatalf("failed to start capturing traffic data, error: %v", err)
 		}
 	}()
+	time.Sleep(5 * time.Second)
 
 	if noAequitas {
 		log.Printf("sending RPCs...")
@@ -78,15 +80,15 @@ func main() {
 		log.Printf("sending RPCs with additive increase set to %v, multiplicative decrease set to %v, and minimum admission probability set to %v", add_inc, mul_dec, min_adm)
 	}
 
-	for i := range maxRpcs {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			waitChan <- struct{}{}
-			utils.SendRPC(use64, noAequitas, add_inc, mul_dec, min_adm)
-			time.Sleep(time.Millisecond)
-			<-waitChan
-		}(i)
+	for range maxRpcs {
+		// 	wg.Add(1)
+		// 	go func() {
+		// 		defer wg.Done()
+		// 		waitChan <- struct{}{}
+		utils.SendRPC(use64, noAequitas, add_inc, mul_dec, min_adm)
+		// 		time.Sleep(time.Millisecond)
+		// 		<-waitChan
+		// 	}()
 	}
-	wg.Wait()
+	// wg.Wait()
 }

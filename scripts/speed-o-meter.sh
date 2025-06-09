@@ -7,7 +7,7 @@ file=$1
 
 cat $file | grep "tos 0x40" > hi-log.tmp
 cat $file | grep "tos 0x20" > lo-log.tmp
-cat $file | grep "tos 0x0" > be-log.tmp
+cat $file | grep "tos 0x10" > be-log.tmp
 
 echo calculating speed from hi-log.tmp in $file...
 seconds=$(echo $(cat hi-log.tmp | cut -d "." -f 1 | awk '!seen[$0]++'))

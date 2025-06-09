@@ -2,20 +2,16 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	sendmessage "magisterium/sendmess"
 	"net"
 	"os"
-	"strconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
-
-var port int
 
 type gRPCServer struct {
 	sendmessage.UnimplementedSendMessageServiceServer
@@ -90,17 +86,41 @@ func getIP(iface string) string {
 
 func main() {
 
-	flag.IntVar(&port, "p", 1, "port on which to run rpc server")
-	flag.Parse()
-
-	if port == 1 {
-		log.Fatalf("exiting, no port provided. Please provide a port on which to run server (-p flag).")
-	}
-
 	ip := getIP("eth0")
 
-	portNumber := strconv.Itoa(port)
-	addr := ip + ":" + portNumber
+	go func() {
+		addr := ip + ":" + "2222"
+		lis, err := net.Listen("tcp", addr)
+		if err != nil {
+			log.Fatalf("failed to listen : %v", err)
+		}
+
+		s := grpc.NewServer()
+		gRPCServer := &gRPCServer{}
+		sendmessage.RegisterSendMessageServiceServer(s, gRPCServer)
+		log.Printf("server listening at %v", lis.Addr())
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
+
+	go func() {
+		addr := ip + ":" + "2223"
+		lis, err := net.Listen("tcp", addr)
+		if err != nil {
+			log.Fatalf("failed to listen : %v", err)
+		}
+
+		s := grpc.NewServer()
+		gRPCServer := &gRPCServer{}
+		sendmessage.RegisterSendMessageServiceServer(s, gRPCServer)
+		log.Printf("server listening at %v", lis.Addr())
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
+
+	addr := ip + ":" + "2224"
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("failed to listen : %v", err)
@@ -113,4 +133,5 @@ func main() {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
 }
