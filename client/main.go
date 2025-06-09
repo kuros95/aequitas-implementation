@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"log"
 	"magisterium/utils"
 	"os"
@@ -10,8 +11,6 @@ import (
 	"sync"
 	"time"
 )
-
-const maxRpcs = 10000
 
 var noAequitas bool
 var noTc bool
@@ -21,11 +20,10 @@ var mul_dec float64
 var min_adm float64
 var lat_tgt int
 var tgt_pctl int
+var maxRpcs int
 var stderr bytes.Buffer
 
 func main() {
-	waitChan := make(chan struct{}, maxRpcs)
-	var wg sync.WaitGroup
 
 	flag.BoolVar(&noAequitas, "n", false, "do not use the aequitas algorithm")
 	flag.BoolVar(&noTc, "t", false, "do not use traffic control")
@@ -35,6 +33,7 @@ func main() {
 	flag.Float64Var(&min_adm, "d", 0.01, "set minimum admission probability for aequitas algorithm, 0.01 by default - DO NOT SET TO ZERO")
 	flag.IntVar(&lat_tgt, "l", 15, "latency target (in ms) for aequitas algorithm, 15 by default")
 	flag.IntVar(&tgt_pctl, "p", 98, "target percentile for aequitas algorithm, 98 by default")
+	flag.IntVar(&maxRpcs, "r", 10000, "maximum number of RPCs to send, 10000 by default")
 
 	logFile, err := os.Create("client.log")
 	if err != nil {
@@ -43,6 +42,9 @@ func main() {
 	log.SetOutput(logFile)
 
 	flag.Parse()
+
+	waitChan := make(chan struct{}, maxRpcs)
+	var wg sync.WaitGroup
 
 	if !noTc {
 		log.Printf("shaping traffic...")
@@ -61,14 +63,14 @@ func main() {
 	tcpdump := exec.Command("./run-tcpdump.sh")
 	tcpdump.Stderr = &stderr
 
-	// go func() {
-	// 	err = tcpdump.Run()
+	go func() {
+		err = tcpdump.Run()
 
-	// 	if err != nil {
-	// 		fmt.Printf("error: %v: %v", err, stderr.String())
-	// 		log.Fatalf("failed to start capturing traffic data, error: %v", err)
-	// 	}
-	// }()
+		if err != nil {
+			fmt.Printf("error: %v: %v", err, stderr.String())
+			log.Fatalf("failed to start capturing traffic data, error: %v", err)
+		}
+	}()
 
 	if noAequitas {
 		log.Printf("sending RPCs...")
@@ -82,7 +84,7 @@ func main() {
 			defer wg.Done()
 			waitChan <- struct{}{}
 			utils.SendRPC(use64, noAequitas, add_inc, mul_dec, min_adm)
-			time.Sleep(time.Duration(lat_tgt) * time.Millisecond)
+			time.Sleep(time.Millisecond)
 			<-waitChan
 		}(i)
 	}

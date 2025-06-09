@@ -39,6 +39,47 @@ type prio struct {
 var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 85, 0, 1, time.Now()}}
 var sock = "172.17.0.2:2222"
 
+func setDscp(dscp string) func(context.Context, string) (net.Conn, error) {
+	return func(ctx context.Context, addr string) (net.Conn, error) {
+		// The int value for 0x20 is 32, and for 0x40 is 64.
+		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", sock)
+		if err != nil {
+			return nil, err
+		}
+
+		tcpConn, ok := conn.(*net.TCPConn)
+		if !ok {
+			err = errors.New("connection is not a TCP connection")
+			return nil, err
+		}
+
+		tos, err := strconv.Atoi(dscp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert DSCP value %s to int: %w", dscp, err)
+		}
+
+		rawConn, err := tcpConn.SyscallConn()
+		if err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("failed to get syscall.RawConn: %w", err)
+		}
+
+		setErr := rawConn.Control(func(fd uintptr) {
+			err = syscall.SetsockoptInt(int(fd), syscall.IPPROTO_IP, syscall.IP_TOS, tos)
+		})
+		if setErr != nil {
+			conn.Close()
+			return nil, fmt.Errorf("failed to set DSCP option: %w", setErr)
+		}
+		if err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("failed to set DSCP option: %w", err)
+		}
+
+		return conn, nil
+	}
+}
+
 func (r rpc) send() (bool, time.Duration, int32, string) {
 
 	var dscp string
@@ -163,46 +204,5 @@ func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float6
 				rpc.isLowered = true
 			}
 		}
-	}
-}
-
-func setDscp(dscp string) func(context.Context, string) (net.Conn, error) {
-	return func(ctx context.Context, addr string) (net.Conn, error) {
-		// The int value for 0x20 is 32, and for 0x40 is 64.
-		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", sock)
-		if err != nil {
-			return nil, err
-		}
-
-		tcpConn, ok := conn.(*net.TCPConn)
-		if !ok {
-			err = errors.New("connection is not a TCP connection")
-			return nil, err
-		}
-
-		tos, err := strconv.Atoi(dscp)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert DSCP value %s to int: %w", dscp, err)
-		}
-
-		rawConn, err := tcpConn.SyscallConn()
-		if err != nil {
-			conn.Close()
-			return nil, fmt.Errorf("failed to get syscall.RawConn: %w", err)
-		}
-
-		setErr := rawConn.Control(func(fd uintptr) {
-			err = syscall.SetsockoptInt(int(fd), syscall.IPPROTO_IP, syscall.IP_TOS, tos)
-		})
-		if setErr != nil {
-			conn.Close()
-			return nil, fmt.Errorf("failed to set DSCP option: %w", setErr)
-		}
-		if err != nil {
-			conn.Close()
-			return nil, fmt.Errorf("failed to set DSCP option: %w", err)
-		}
-
-		return conn, nil
 	}
 }
