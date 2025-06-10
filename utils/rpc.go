@@ -38,6 +38,7 @@ type prio struct {
 
 var prios = []prio{{"hi", 20 * time.Millisecond, 99, 0, 1, time.Now()}, {"lo", 15 * time.Millisecond, 85, 0, 1, time.Now()}}
 var sock string
+var TimeStart time.Time
 
 func setDscp(dscp string) func(context.Context, string) (net.Conn, error) {
 	return func(ctx context.Context, addr string) (net.Conn, error) {
@@ -192,20 +193,23 @@ func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float6
 		rpc.prio = prio_to_assign
 	}
 
-	// for {
-	completed, elapsed, size, prio := rpc.send()
+	for {
+		completed, elapsed, size, prio := rpc.send()
 
-	if completed {
-		log.Printf("completed an RPC of size %vkb with prio %v in %v", size, prio, elapsed)
-		fmt.Printf("completed an RPC of size %vkb with prio %v in %v\n", size, prio, elapsed)
-		if !noAequitas {
-			rpc.admit(add_inc, mul_dec, min_adm)
+		if completed {
+			log.Printf("completed an RPC of size %vkb with prio %v in %v", size, prio, elapsed)
+			fmt.Printf("completed an RPC of size %vkb with prio %v in %v\n", size, prio, elapsed)
+			if !noAequitas {
+				rpc.admit(add_inc, mul_dec, min_adm)
+			}
+		} else if !completed {
+			log.Printf("failed to complete an RPC of size %vkb with prio %v and latency target %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.prio.latency, rpc.elapsed)
+			if !noAequitas {
+				rpc.isLowered = true
+			}
 		}
-	} else if !completed {
-		log.Printf("failed to complete an RPC of size %vkb with prio %v and latency target %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.prio.latency, rpc.elapsed)
-		if !noAequitas {
-			rpc.isLowered = true
+		if time.Since(TimeStart) > 10*time.Minute {
+			break
 		}
 	}
-	// }
 }

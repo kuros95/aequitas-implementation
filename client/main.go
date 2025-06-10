@@ -8,6 +8,7 @@ import (
 	"magisterium/utils"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func main() {
 	flag.Float64Var(&min_adm, "d", 0.01, "set minimum admission probability for aequitas algorithm, 0.01 by default - DO NOT SET TO ZERO")
 	flag.IntVar(&lat_tgt, "l", 15, "latency target (in ms) for aequitas algorithm, 15 by default")
 	flag.IntVar(&tgt_pctl, "p", 98, "target percentile for aequitas algorithm, 98 by default")
-	flag.IntVar(&maxRpcs, "r", 10000, "maximum number of RPCs to send, 10000 by default")
+	flag.IntVar(&maxRpcs, "r", 1000, "maximum number of RPCs to send, 10000 by default")
 
 	logFile, err := os.Create("client.log")
 	if err != nil {
@@ -42,8 +43,8 @@ func main() {
 
 	flag.Parse()
 
-	// waitChan := make(chan struct{}, maxRpcs)
-	// var wg sync.WaitGroup
+	waitChan := make(chan struct{}, maxRpcs)
+	var wg sync.WaitGroup
 
 	if !noTc {
 		log.Printf("shaping traffic...")
@@ -72,23 +73,27 @@ func main() {
 			log.Fatalf("failed to start capturing traffic data, error: %v", err)
 		}
 	}()
-	time.Sleep(5 * time.Second)
+	time.Sleep(5 * time.Second) // give tcpdump time to start
 
 	if noAequitas {
 		log.Printf("sending RPCs...")
 	} else {
 		log.Printf("sending RPCs with additive increase set to %v, multiplicative decrease set to %v, and minimum admission probability set to %v", add_inc, mul_dec, min_adm)
 	}
-
+	utils.TimeStart = time.Now()
 	for range maxRpcs {
-		// 	wg.Add(1)
-		// 	go func() {
-		// 		defer wg.Done()
-		// 		waitChan <- struct{}{}
-		utils.SendRPC(use64, noAequitas, add_inc, mul_dec, min_adm)
-		// 		time.Sleep(time.Millisecond)
-		// 		<-waitChan
-		// 	}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			waitChan <- struct{}{}
+			utils.SendRPC(use64, noAequitas, add_inc, mul_dec, min_adm)
+			time.Sleep(time.Millisecond)
+			<-waitChan
+		}()
+		if time.Since(utils.TimeStart) > 10*time.Minute {
+			break
+		}
 	}
-	// wg.Wait()
+	wg.Wait()
+	time.Sleep(5 * time.Second) // let the last RPCs finish and tcpdump capture them
 }
