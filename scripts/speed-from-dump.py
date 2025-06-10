@@ -36,7 +36,7 @@ def sortByTos(dumpfile):
                     bytes = line[12].split(':')[0]
                     bytesInSecond += int(bytes)
             with open("speed-hi.csv", mode='a') as speedHiFile:
-                print(second, bytesInSecond, file=speedHiFile)
+                print(second+',', bytesInSecond, file=speedHiFile)
             bytesInSecond = 0
 
     if len(loTmp) > 0:
@@ -55,7 +55,7 @@ def sortByTos(dumpfile):
                     bytes = line[12].split(':')[0]
                     bytesInSecond += int(bytes)
             with open("speed-log.csv", mode='a') as speedLoFile:
-                print(second, bytesInSecond, file=speedLoFile)
+                print(second+',', bytesInSecond, file=speedLoFile)
             bytesInSecond = 0
 
     if len(beTmp) > 0:
@@ -74,7 +74,7 @@ def sortByTos(dumpfile):
                     bytes = line[12].split(':')[0]
                     bytesInSecond += int(bytes)
             with open("speed-be.csv", mode='a') as speedBeFile:
-                print(second, bytesInSecond, file=speedBeFile)
+                print(second+',', bytesInSecond, file=speedBeFile)
             bytesInSecond = 0
     
     print("Speed calculations completed. Logs saved to speed-hi.csv, speed-lo.csv, and speed-be.csv.")
