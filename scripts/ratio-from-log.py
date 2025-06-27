@@ -4,8 +4,6 @@ import sys
 
 here = os.getcwd()
 
-
-
 #read from file
 def countRatio(logFile):
     compHi = 0
@@ -36,7 +34,6 @@ def countRatio(logFile):
             elif "priority:" in line and "be" in line:
                 with open("sent-be.tmp", mode='a') as f:
                     f.write(str(line) + "\n")
-
     
     if os.path.isfile("comp-hi.tmp"):
         print("Calculating ratio from *-hi.tmp files...")
@@ -62,17 +59,16 @@ def countRatio(logFile):
 
         with open("sent-be.tmp", mode='r') as beFile:
             sentBe = len(beFile.readlines())
-        
 
     with open("ratio.csv", "w") as ratio_log:
         print("sent/comp,", "hi,", "lo,", "be", file=ratio_log)
-        print("completed,", compHi+',', compLo+',', compBe, file=ratio_log)
-        print("sent,", sentHi+',', sentLo+',', sentBe, file=ratio_log)
+        print("completed,", str(compHi)+',', str(compLo)+',', str(compBe), file=ratio_log)
+        print("sent,", str(sentHi)+',', str(sentLo)+',', str(sentBe), file=ratio_log)
         # Avoid division by zero
         ratio_hi = compHi / sentHi if sentHi else 0
         ratio_lo = compLo / sentLo if sentLo else 0
         ratio_be = compBe / sentBe if sentBe else 0
-        print("ratio,", ratio_hi+',', ratio_lo+',', ratio_be, file=ratio_log)
+        print("ratio,", str(ratio_hi)+',', str(ratio_lo)+',', str(ratio_be), file=ratio_log)
 
     for tmp_file in [
         "comp-hi.tmp", "sent-hi.tmp",

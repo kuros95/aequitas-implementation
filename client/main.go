@@ -27,7 +27,7 @@ func main() {
 
 	flag.BoolVar(&noAequitas, "n", false, "do not use the aequitas algorithm")
 	flag.BoolVar(&noTc, "t", false, "do not use traffic control")
-	flag.BoolVar(&use64, "u", false, "use 64kb payload for messages")
+	flag.BoolVar(&use64, "u", false, "use 64KB payload for messages")
 	flag.Float64Var(&add_inc, "a", 0.01, "set additive increase factor for aequitas algorithm, 0.01 by default")
 	flag.Float64Var(&mul_dec, "m", 0.01, "set multiplicative decrease factor for aequitas algorithm, 0.01 by default")
 	flag.Float64Var(&min_adm, "d", 0.01, "set minimum admission probability for aequitas algorithm, 0.01 by default - DO NOT SET TO ZERO")
@@ -81,16 +81,24 @@ func main() {
 		log.Printf("sending RPCs with additive increase set to %v, multiplicative decrease set to %v, and minimum admission probability set to %v", add_inc, mul_dec, min_adm)
 	}
 	utils.TimeStart = time.Now()
-	for range maxRpcs {
+	sent := 0
+
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		<-ticker.C
 		wg.Add(1)
+		waitChan <- struct{}{}
+
 		go func() {
 			defer wg.Done()
-			waitChan <- struct{}{}
 			utils.SendRPC(use64, noAequitas, add_inc, mul_dec, min_adm)
-			time.Sleep(time.Millisecond)
 			<-waitChan
 		}()
-		if time.Since(utils.TimeStart) > 10*time.Minute {
+		sent++
+
+		if time.Since(utils.TimeStart) > 5*time.Minute {
+			fmt.Printf("stopping client after 5 minutes of sending RPCs")
 			break
 		}
 	}

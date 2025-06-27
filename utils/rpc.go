@@ -146,7 +146,7 @@ func (r rpc) send() (bool, time.Duration, int32, string) {
 	resp, err := c.SendMessage(ctxWithMD, &sendmessage.SendMessageRequest{
 		AliveReq:  "Alive?",
 		Size:      r.size,
-		Payload:   strconv.Itoa(int(r.size)) + "kb-payload",
+		Payload:   strconv.Itoa(int(r.size)) + "KB-payload",
 		MessChunk: messChunk,
 	})
 	log.Printf("sending RPC with priority: %v to %v \n", r.prio.prio, sock)
@@ -192,7 +192,7 @@ func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float6
 	} else if noAequitas {
 		rpc.prio = prio_to_assign
 	}
-
+	rpcTime := time.Now()
 	for {
 		completed, elapsed, size, prio := rpc.send()
 
@@ -208,7 +208,7 @@ func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float6
 				rpc.isLowered = true
 			}
 		}
-		if time.Since(TimeStart) > 10*time.Minute {
+		if time.Since(rpcTime) > 50*time.Millisecond {
 			break
 		}
 	}

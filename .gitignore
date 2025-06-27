@@ -7,3 +7,4 @@ unused
 *.txt
 tests/socketTests
 tests/results
+.vscode/
