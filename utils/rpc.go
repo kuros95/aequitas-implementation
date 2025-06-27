@@ -161,10 +161,13 @@ func (r rpc) send() (bool, time.Duration, int32, string) {
 func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float64) {
 	var rpc rpc
 
-	chooser, _ := wr.NewChooser(
+	chooser, err := wr.NewChooser(
 		wr.Choice{Item: "hi", Weight: 7},
 		wr.Choice{Item: "lo", Weight: 3},
 	)
+	if err != nil {
+		log.Fatalf("failed to create weighted chooser: %v", err)
+	}
 	var indexof int
 
 	prio_name := chooser.Pick().(string)
@@ -203,7 +206,7 @@ func SendRPC(use_64kb_payload, noAequitas bool, add_inc, mul_dec, min_adm float6
 				rpc.admit(add_inc, mul_dec, min_adm)
 			}
 		} else if !completed {
-			log.Printf("failed to complete an RPC of size %vkb with prio %v and latency target %v, because %v was too long... lowering priority", rpc.size, rpc.prio.prio, rpc.prio.latency, rpc.elapsed)
+			log.Printf("failed to complete an RPC of size %vkb with prio %v and latency target %v, because %v was too long... lowering priority to 'be' (best effort) for next attempt", rpc.size, rpc.prio.prio, rpc.prio.latency, rpc.elapsed)
 			if !noAequitas {
 				rpc.isLowered = true
 			}
