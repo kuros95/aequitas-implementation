@@ -8,6 +8,7 @@ import (
 	"magisterium/utils"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -24,6 +25,7 @@ var maxRpcs int
 var stderr bytes.Buffer
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	flag.BoolVar(&noAequitas, "n", false, "do not use the aequitas algorithm")
 	flag.BoolVar(&noTc, "t", false, "do not use traffic control")
@@ -83,7 +85,7 @@ func main() {
 	utils.TimeStart = time.Now()
 	sent := 0
 
-	ticker := time.NewTicker(time.Millisecond)
+	ticker := time.NewTicker(100 * time.Microsecond) // 10,000 per second
 	defer ticker.Stop()
 	for {
 		<-ticker.C

@@ -117,7 +117,7 @@ func (r rpc) send() (bool, time.Duration, int32, string) {
 	ctxWithMD := metadata.NewOutgoingContext(ctx, header)
 
 	bufferSize := r.size * 1024
-	file, err := os.Open(strconv.Itoa(int(r.size)) + "kb-payload")
+	file, err := os.Open(strconv.Itoa(int(r.size)) + "KB-payload")
 	buff := make([]byte, bufferSize)
 	if err != nil {
 		fmt.Printf("failed to open request payload: %v", err)

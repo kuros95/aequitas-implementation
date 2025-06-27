@@ -12,7 +12,7 @@ COPY ./server/main.go /builder/server
 
 COPY /sendmess/ /builder/sendmess
 
-COPY go.mod go.sum 32kb-payload 64kb-payload /builder/
+COPY go.mod go.sum 32KB-payload 64KB-payload /builder/
 
 RUN go build -tags netgo -a -v -o server ./server/
 

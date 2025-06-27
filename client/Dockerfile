@@ -12,7 +12,7 @@ COPY /sendmess/ /builder/sendmess
 
 COPY /utils/ /builder/utils
 
-COPY go.mod go.sum tc-on-host.sh run-tcpdump.sh 32kb-payload 64kb-payload /builder/
+COPY go.mod go.sum tc-on-host.sh run-tcpdump.sh 32KB-payload 64KB-payload /builder/
 
 WORKDIR /builder/client
 
