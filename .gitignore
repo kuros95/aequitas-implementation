@@ -8,3 +8,5 @@ unused
 tests/socketTests
 tests/results
 .vscode/*
+*.png
+test-*
